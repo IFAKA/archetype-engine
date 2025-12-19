@@ -73,14 +73,16 @@ export function use${name}(id: string) {
 export function use${name}Form() {
 ${tDeclaration}
   const utils = trpc.useUtils()
-  const mutation = trpc.${lowerName}.create.useMutation({
-    onSuccess: () => {
-      utils.${lowerName}.list.invalidate()
-    },
-  })
 
   const form = useForm<${name}Create>({
     resolver: zodResolver(${resolverSchema}),
+  })
+
+  const mutation = trpc.${lowerName}.create.useMutation({
+    onSuccess: () => {
+      utils.${lowerName}.list.invalidate()
+      form.reset()
+    },
   })
 
   return {

@@ -350,6 +350,12 @@ describe('React Hooks Generation', () => {
     expect(productHook).toContain('export function useProductForm')
   })
 
+  it('resets form to default values on successful create', () => {
+    const productHook = hooks.Product
+    // Verify form.reset() is called inside onSuccess callback
+    expect(productHook).toMatch(/onSuccess:\s*\(\)\s*=>\s*\{[^}]*form\.reset\(\)/)
+  })
+
   it('generates useEditForm hook', () => {
     const productHook = hooks.Product
     expect(productHook).toContain('export function useProductEditForm')
