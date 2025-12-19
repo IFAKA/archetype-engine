@@ -188,18 +188,24 @@ export interface TemplateFile {
   content: string
 }
 
-export function getAllTemplateFiles(config: InitConfig): TemplateFile[] {
+export interface ProjectStructure {
+  useSrcDir: boolean // true if project uses src/ directory
+}
+
+export function getAllTemplateFiles(config: InitConfig, structure: ProjectStructure): TemplateFile[] {
+  const prefix = structure.useSrcDir ? 'src/' : ''
+
   const files: TemplateFile[] = [
     // Config
     { path: 'archetype.config.ts', content: getConfigTemplate(config) },
     { path: 'drizzle.config.ts', content: getDrizzleConfigTemplate(config) },
 
     // Infrastructure
-    { path: 'src/server/db.ts', content: getDbTemplate(config) },
-    { path: 'src/server/trpc.ts', content: getTrpcServerTemplate() },
-    { path: 'src/lib/trpc.ts', content: getTrpcClientTemplate() },
-    { path: 'src/app/providers.tsx', content: getProvidersTemplate() },
-    { path: 'src/app/api/trpc/[trpc]/route.ts', content: getApiRouteTemplate() },
+    { path: `${prefix}server/db.ts`, content: getDbTemplate(config) },
+    { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate() },
+    { path: `${prefix}lib/trpc.ts`, content: getTrpcClientTemplate() },
+    { path: `${prefix}app/providers.tsx`, content: getProvidersTemplate() },
+    { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate() },
   ]
 
   // Example entity

@@ -36,11 +36,26 @@ function generateEntityHooks(entity: EntityIR, manifest: ManifestIR): string {
 
 'use client'
 
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { trpc } from '@/lib/trpc'
 ${i18nImport}
 ${schemaImport}
+
+// Convert null values to undefined for form compatibility
+type NullToUndefined<T> = {
+  [K in keyof T]: T[K] extends null ? undefined : Exclude<T[K], null>
+}
+
+function nullToUndefined<T extends Record<string, unknown>>(
+  obj: T | null | undefined
+): NullToUndefined<T> | undefined {
+  if (!obj) return undefined
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, v === null ? undefined : v])
+  ) as NullToUndefined<T>
+}
 
 // ============ LIST ============
 export function use${name}s() {
@@ -93,9 +108,11 @@ ${tDeclaration}
     },
   })
 
+  const formValues = useMemo(() => nullToUndefined(${lowerName}), [${lowerName}])
+
   const form = useForm<${name}Update>({
     resolver: zodResolver(${updateResolverSchema}),
-    values: ${lowerName} ?? undefined,
+    values: formValues,
   })
 
   return {

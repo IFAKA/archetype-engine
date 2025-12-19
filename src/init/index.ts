@@ -5,7 +5,7 @@ import * as path from 'path'
 import { spawn } from 'child_process'
 import type { InitConfig } from './dependencies'
 import { getRecommendedConfig, getDependencies } from './dependencies'
-import { getAllTemplateFiles, getPackageJsonScripts } from './templates'
+import { getAllTemplateFiles, getPackageJsonScripts, ProjectStructure } from './templates'
 import {
   runPrompts,
   displayConfigSummary,
@@ -82,8 +82,30 @@ export async function init(options: InitOptions = {}): Promise<void> {
   }
 }
 
+/**
+ * Detect project structure - whether it uses src/ directory or root-level
+ * Next.js projects can have either /app or /src/app
+ */
+function detectProjectStructure(targetDir: string): ProjectStructure {
+  // Check if src/app exists (src-based structure)
+  const srcAppPath = path.join(targetDir, 'src', 'app')
+  if (fs.existsSync(srcAppPath)) {
+    return { useSrcDir: true }
+  }
+
+  // Check if root /app exists (root-based structure)
+  const rootAppPath = path.join(targetDir, 'app')
+  if (fs.existsSync(rootAppPath)) {
+    return { useSrcDir: false }
+  }
+
+  // Default to src-based if neither exists (new project)
+  return { useSrcDir: true }
+}
+
 function writeTemplateFiles(targetDir: string, config: InitConfig): void {
-  const files = getAllTemplateFiles(config)
+  const structure = detectProjectStructure(targetDir)
+  const files = getAllTemplateFiles(config, structure)
 
   for (const file of files) {
     const fullPath = path.join(targetDir, file.path)
@@ -95,6 +117,51 @@ function writeTemplateFiles(targetDir: string, config: InitConfig): void {
 
     fs.writeFileSync(fullPath, file.content, 'utf-8')
   }
+
+  // Update existing layout.tsx to wrap children with Providers
+  updateLayoutWithProviders(targetDir, structure)
+}
+
+/**
+ * Update the existing layout.tsx to wrap children with Providers
+ * This enables tRPC context for the entire app
+ */
+function updateLayoutWithProviders(targetDir: string, structure: ProjectStructure): void {
+  const prefix = structure.useSrcDir ? 'src/' : ''
+  const layoutPath = path.join(targetDir, `${prefix}app/layout.tsx`)
+
+  if (!fs.existsSync(layoutPath)) return
+
+  let content = fs.readFileSync(layoutPath, 'utf-8')
+
+  // Skip if already has Providers
+  if (content.includes('Providers')) return
+
+  // Add import for Providers after other imports
+  const importStatement = 'import { Providers } from "./providers";\n'
+
+  // Find the last import statement and add after it
+  const importRegex = /^import .+$/gm
+  let lastImportMatch: RegExpExecArray | null = null
+  let match: RegExpExecArray | null
+
+  while ((match = importRegex.exec(content)) !== null) {
+    lastImportMatch = match
+  }
+
+  if (lastImportMatch) {
+    const insertPos = lastImportMatch.index + lastImportMatch[0].length
+    content = content.slice(0, insertPos) + '\n' + importStatement + content.slice(insertPos)
+  }
+
+  // Wrap {children} with <Providers>{children}</Providers>
+  // Handle both {children} and { children } patterns
+  content = content.replace(
+    /(\s*)\{(\s*)children(\s*)\}(\s*)/g,
+    '$1<Providers>{children}</Providers>$4'
+  )
+
+  fs.writeFileSync(layoutPath, content, 'utf-8')
 }
 
 function updatePackageJson(packageJsonPath: string): void {

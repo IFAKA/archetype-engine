@@ -51,11 +51,25 @@ function loadManifest(configFile: string): ManifestIR {
   // Clear require cache for fresh load
   delete require.cache[absolutePath]
 
+  // Get the config file's directory for module resolution
+  const configDir = path.dirname(absolutePath)
+  const projectNodeModules = path.join(configDir, 'node_modules')
+
+  // Add project's node_modules to NODE_PATH for module resolution
+  // This ensures npm link and local dependencies are found when loading the config
+  if (fs.existsSync(projectNodeModules)) {
+    const currentNodePath = process.env.NODE_PATH || ''
+    process.env.NODE_PATH = projectNodeModules + path.delimiter + currentNodePath
+    // Force Node to re-read NODE_PATH
+    require('module').Module._initPaths()
+  }
+
   // Register TypeScript if needed
   if (absolutePath.endsWith('.ts')) {
     try {
       require('ts-node').register({
         transpileOnly: true,
+        cwd: configDir,
         compilerOptions: {
           module: 'commonjs',
           moduleResolution: 'node',
@@ -67,8 +81,8 @@ function loadManifest(configFile: string): ManifestIR {
   }
 
   // Load the module
-  const module = require(absolutePath)
-  const manifest = module.default || module
+  const loadedModule = require(absolutePath)
+  const manifest = loadedModule.default || loadedModule
 
   if (!manifest.entities) {
     console.error('Invalid manifest: missing "entities" property')
@@ -88,12 +102,30 @@ function openBrowser(url: string): void {
   exec(`${cmd} "${url}"`)
 }
 
-function serveERD(mermaidCode: string, port = 3333): void {
+function serveERD(mermaidCode: string, port = 3333, maxAttempts = 10): void {
   const html = buildHTML(mermaidCode)
 
   const server = http.createServer((_, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html' })
     res.end(html)
+  })
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      const nextPort = port + 1
+      if (nextPort - 3333 < maxAttempts) {
+        console.log(`Port ${port} is in use, trying ${nextPort}...`)
+        serveERD(mermaidCode, nextPort, maxAttempts)
+      } else {
+        console.error(`Could not find an available port (tried ${3333}-${port})`)
+        console.error('Try killing the process using the port:')
+        console.error(`  lsof -i :3333 | grep LISTEN | awk '{print $2}' | xargs kill -9`)
+        process.exit(1)
+      }
+    } else {
+      console.error('Server error:', err.message)
+      process.exit(1)
+    }
   })
 
   server.listen(port, () => {

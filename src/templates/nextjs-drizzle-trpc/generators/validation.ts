@@ -22,25 +22,26 @@ function generateFieldSchema(
     case 'date': parts.push('z.string()'); break
   }
 
-  // Required/optional
-  if (config.required) {
-    if (config.type === 'text') {
-      if (useI18n) {
-        parts.push(`.min(1, { message: t('required', { field: '${label}' }) })`)
-      } else {
-        parts.push(`.min(1, { message: '${label} is required' })`)
-      }
+  // Required check for text (must come before validations and optional)
+  if (config.required && config.type === 'text') {
+    if (useI18n) {
+      parts.push(`.min(1, { message: t('required', { field: '${label}' }) })`)
+    } else {
+      parts.push(`.min(1, { message: '${label} is required' })`)
     }
-  } else {
-    parts.push('.optional()')
   }
 
-  // Validations
+  // Validations (must come before optional)
   for (const validation of config.validations) {
     parts.push(generateValidation(validation, label, useI18n))
   }
 
-  // Default
+  // Optional (must come after validations)
+  if (!config.required) {
+    parts.push('.optional()')
+  }
+
+  // Default (must come after optional)
   if (config.default !== undefined && !config.required) {
     if (typeof config.default === 'string') {
       parts.push(`.default('${config.default}')`)
@@ -152,8 +153,8 @@ export function ${lowerName}UpdateSchemaI18n(t: TranslationFn) {
   return ${lowerName}CreateSchemaI18n(t).partial()
 }
 
-export type ${name}Create = z.infer<typeof ${lowerName}CreateSchema>
-export type ${name}Update = z.infer<typeof ${lowerName}UpdateSchema>
+export type ${name}Create = z.input<typeof ${lowerName}CreateSchema>
+export type ${name}Update = z.input<typeof ${lowerName}UpdateSchema>
 `
   }
 
@@ -168,8 +169,8 @@ ${staticFields.join('\n')}
 
 export const ${lowerName}UpdateSchema = ${lowerName}CreateSchema.partial()
 
-export type ${name}Create = z.infer<typeof ${lowerName}CreateSchema>
-export type ${name}Update = z.infer<typeof ${lowerName}UpdateSchema>
+export type ${name}Create = z.input<typeof ${lowerName}CreateSchema>
+export type ${name}Update = z.input<typeof ${lowerName}UpdateSchema>
 `
 }
 
