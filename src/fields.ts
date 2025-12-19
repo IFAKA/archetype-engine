@@ -1,5 +1,11 @@
-// Field builders for entity definitions
-// Each method returns a new immutable object (FP under the hood)
+/**
+ * Field builders for entity definitions
+ *
+ * Each method returns a new immutable object (functional programming pattern).
+ * Chain methods to build field configurations fluently.
+ *
+ * @module fields
+ */
 
 export interface Validation {
   type: string
@@ -153,7 +159,22 @@ function createDateFieldBuilder(config: FieldConfig): DateFieldBuilder {
   }
 }
 
-// Factory functions (entry points)
+/**
+ * Create a text field builder
+ *
+ * @returns TextFieldBuilder with chainable methods
+ *
+ * @example
+ * ```typescript
+ * text()
+ *   .required()
+ *   .unique()
+ *   .email()
+ *   .min(5).max(255)
+ *   .trim()
+ *   .lowercase()
+ * ```
+ */
 export function text(): TextFieldBuilder {
   return createTextFieldBuilder({
     type: 'text',
@@ -163,6 +184,20 @@ export function text(): TextFieldBuilder {
   })
 }
 
+/**
+ * Create a number field builder
+ *
+ * @returns NumberFieldBuilder with chainable methods
+ *
+ * @example
+ * ```typescript
+ * number()
+ *   .required()
+ *   .min(0).max(100)
+ *   .integer()
+ *   .positive()
+ * ```
+ */
 export function number(): NumberFieldBuilder {
   return createNumberFieldBuilder({
     type: 'number',
@@ -172,6 +207,16 @@ export function number(): NumberFieldBuilder {
   })
 }
 
+/**
+ * Create a boolean field builder
+ *
+ * @returns BooleanFieldBuilder with chainable methods
+ *
+ * @example
+ * ```typescript
+ * boolean().default(false)
+ * ```
+ */
 export function boolean(): BooleanFieldBuilder {
   return createBooleanFieldBuilder({
     type: 'boolean',
@@ -181,6 +226,17 @@ export function boolean(): BooleanFieldBuilder {
   })
 }
 
+/**
+ * Create a date field builder
+ *
+ * @returns DateFieldBuilder with chainable methods
+ *
+ * @example
+ * ```typescript
+ * date().default('now')
+ * date().required()
+ * ```
+ */
 export function date(): DateFieldBuilder {
   return createDateFieldBuilder({
     type: 'date',

@@ -1,12 +1,20 @@
-// Manifest definition - collects all entities and settings
+/**
+ * Manifest definition - collects all entities and settings
+ * @module manifest
+ */
 
 import { EntityIR } from './entity'
 
-// Database configuration
+/**
+ * Database connection configuration
+ */
 export interface DatabaseConfig {
+  /** Database type */
   type: 'sqlite' | 'postgres' | 'mysql'
-  file?: string  // For SQLite
-  url?: string   // For PostgreSQL/MySQL
+  /** SQLite file path (for SQLite only) */
+  file?: string
+  /** Connection URL (for PostgreSQL/MySQL) */
+  url?: string
 }
 
 // Auth configuration (next-auth integration)
@@ -117,10 +125,38 @@ function compileManifest(definition: ManifestDefinition): ManifestIR {
   }
 }
 
-// Main function to define a manifest
+/**
+ * Define a manifest with entities and configuration
+ *
+ * @param definition - Manifest configuration
+ * @returns Compiled ManifestIR for use by CLI and generators
+ *
+ * @example
+ * ```typescript
+ * const manifest = defineManifest({
+ *   template: 'nextjs-drizzle-trpc',
+ *   entities: [User, Post],
+ *   database: { type: 'sqlite', file: './sqlite.db' },
+ * })
+ * ```
+ */
 export function defineManifest(definition: ManifestDefinition): ManifestIR {
   return compileManifest(definition)
 }
 
-// Alias for config file usage (archetype.config.ts)
+/**
+ * Alias for defineManifest - use in archetype.config.ts
+ *
+ * @example
+ * ```typescript
+ * // archetype.config.ts
+ * import { defineConfig } from 'archetype-engine'
+ *
+ * export default defineConfig({
+ *   template: 'nextjs-drizzle-trpc',
+ *   entities: [User, Post],
+ *   database: { type: 'postgres', url: process.env.DATABASE_URL },
+ * })
+ * ```
+ */
 export const defineConfig = defineManifest
