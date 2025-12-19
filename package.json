@@ -1,0 +1,60 @@
+{
+  "name": "archetype-engine",
+  "version": "2.0.0",
+  "description": "Declarative data engine with fluent TypeScript API for safe, synced infrastructure",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js",
+      "require": "./dist/src/index.js"
+    }
+  },
+  "bin": {
+    "archetype": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "init": "node dist/src/cli.js init",
+    "generate": "node dist/src/cli.js generate"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "typescript": "^5.6.2",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "keywords": [
+    "declarative",
+    "orm",
+    "safety",
+    "nextjs",
+    "drizzle",
+    "trpc",
+    "zod",
+    "archetype",
+    "code-generation",
+    "crud",
+    "api",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}
