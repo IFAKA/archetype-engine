@@ -11,20 +11,29 @@ A declarative data engine with a fluent TypeScript API that generates type-safe 
 
 ## Quick Start
 
+### Local Installation (Development)
+
 ```bash
-# 1. Create Next.js project
+# 1. Clone and build archetype-engine
+git clone https://github.com/ifaka/archetype.git
+cd archetype
+npm install && npm run build
+npm link
+
+# 2. Create Next.js project
+cd ..
 npx create-next-app my-app && cd my-app
 
-# 2. Install archetype
-npm install archetype-engine
+# 3. Link archetype-engine locally
+npm link archetype-engine
 
-# 3. Initialize (creates config + infrastructure + installs deps)
+# 4. Initialize (creates config + infrastructure + installs deps)
 npx archetype init --yes
 
-# 4. Generate code
+# 5. Generate code
 npx archetype generate
 
-# 5. Push DB schema + run
+# 6. Push DB schema + run
 npx drizzle-kit push && npm run dev
 ```
 
