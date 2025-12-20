@@ -290,95 +290,392 @@ User: "I want a blog with users and posts"
 }
 ```
 
-## Building a "Talk to Build" Product
+## Example: Building an AI App Builder
 
-Here's a complete example of how to build a product where users describe their app and AI generates it:
+This example walks through building an "AI App Builder" - a product where users describe an app and get working code.
 
-### 1. Set Up Next.js with Archetype
+---
+
+### Part 1: Building the AI App Builder
+
+Create a Next.js app that will be your AI Builder:
 
 ```bash
-npx create-next-app my-ai-builder
-cd my-ai-builder
-npm install archetype-engine
+npx create-next-app@latest ai-app-builder
+cd ai-app-builder
+npm install archetype-engine openai
 ```
 
-### 2. Create the AI Generation Endpoint
+#### File 1: The Generation Logic
+
+```typescript
+// lib/generate-app.ts
+import { validateManifest, parseManifestJSON, getTemplate, runTemplate } from 'archetype-engine'
+import type { ManifestIR } from 'archetype-engine'
+import OpenAI from 'openai'
+
+const openai = new OpenAI()
+
+// Convert natural language to archetype manifest
+async function createManifest(description: string) {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: description }
+    ]
+  })
+  return JSON.parse(response.choices[0].message.content!)
+}
+
+// Generate UI components from manifest
+function generateUIPages(manifest: ManifestIR) {
+  const pages: { path: string; content: string }[] = []
+
+  for (const entity of manifest.entities) {
+    const name = entity.name
+    const nameLower = name.toLowerCase()
+    const fields = Object.keys(entity.fields)
+
+    // List page
+    pages.push({
+      path: `app/(generated)/${nameLower}/page.tsx`,
+      content: `'use client'
+import { use${name}s } from '@/generated/hooks/use${name}'
+import Link from 'next/link'
+
+export default function ${name}List() {
+  const { data, isLoading } = use${name}s()
+  if (isLoading) return <p>Loading...</p>
+  return (
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">${name}s</h1>
+        <Link href="/${nameLower}/new" className="bg-blue-500 text-white px-4 py-2 rounded">
+          Add ${name}
+        </Link>
+      </div>
+      <table className="w-full border">
+        <thead>
+          <tr className="bg-gray-100">
+            ${fields.map(f => `<th className="p-2 text-left">${f}</th>`).join('\n            ')}
+          </tr>
+        </thead>
+        <tbody>
+          {data?.map(item => (
+            <tr key={item.id} className="border-t">
+              ${fields.map(f => `<td className="p-2">{String(item.${f})}</td>`).join('\n              ')}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}`
+    })
+
+    // Create form page
+    pages.push({
+      path: `app/(generated)/${nameLower}/new/page.tsx`,
+      content: `'use client'
+import { useCreate${name} } from '@/generated/hooks/use${name}'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+
+export default function Create${name}() {
+  const router = useRouter()
+  const create = useCreate${name}()
+  const [form, setForm] = useState({ ${fields.map(f => `${f}: ''`).join(', ')} })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await create.mutateAsync(form)
+    router.push('/${nameLower}')
+  }
+
+  return (
+    <div className="p-8 max-w-md">
+      <h1 className="text-2xl font-bold mb-4">Create ${name}</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        ${fields.map(f => `<input
+          className="w-full border p-2 rounded"
+          placeholder="${f}"
+          value={form.${f}}
+          onChange={e => setForm({ ...form, ${f}: e.target.value })}
+        />`).join('\n        ')}
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full">
+          Create
+        </button>
+      </form>
+    </div>
+  )
+}`
+    })
+  }
+
+  return pages
+}
+
+// Main function: generate complete app
+export async function generateApp(description: string) {
+  // 1. AI creates manifest from description
+  const manifestJSON = await createManifest(description)
+
+  // 2. Validate manifest
+  const validation = validateManifest(manifestJSON)
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors }
+  }
+
+  // 3. archetype-engine generates backend
+  const manifest = parseManifestJSON(manifestJSON)
+  const template = await getTemplate('nextjs-drizzle-trpc')
+  const backendFiles = await runTemplate(template!, manifest)
+
+  // 4. Generate UI pages using the hooks
+  const uiPages = generateUIPages(manifest)
+
+  return {
+    success: true,
+    files: [...backendFiles, ...uiPages],
+    entities: manifest.entities.map(e => e.name),
+    manifest: manifestJSON
+  }
+}
+
+const SYSTEM_PROMPT = `You convert app descriptions into archetype-engine JSON manifests.
+
+Return ONLY valid JSON:
+{
+  "entities": [
+    {
+      "name": "User",
+      "fields": {
+        "email": { "type": "text", "email": true, "unique": true },
+        "name": { "type": "text" }
+      }
+    },
+    {
+      "name": "Task",
+      "fields": {
+        "title": { "type": "text" },
+        "done": { "type": "boolean", "default": false }
+      },
+      "relations": {
+        "assignee": { "type": "hasOne", "entity": "User" }
+      }
+    }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" },
+  "auth": { "enabled": true, "providers": ["credentials"] }
+}
+
+Field types: text, number, boolean, date
+Text validations: email, url, min, max, unique, oneOf
+Number validations: min, max, integer, positive`
+```
+
+#### File 2: API Endpoint
 
 ```typescript
 // app/api/generate/route.ts
-import { parseManifestJSON, validateManifest } from 'archetype-engine'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-
-const execAsync = promisify(exec)
+import { generateApp } from '@/lib/generate-app'
+import { writeFile, mkdir } from 'fs/promises'
+import path from 'path'
 
 export async function POST(req: Request) {
-  const { manifest } = await req.json()
+  const { description, outputDir = './generated-app' } = await req.json()
 
-  // 1. Validate the manifest
-  const validation = validateManifest(manifest)
-  if (!validation.valid) {
-    return Response.json({
-      success: false,
-      errors: validation.errors
-    }, { status: 400 })
+  const result = await generateApp(description)
+
+  if (!result.success) {
+    return Response.json(result, { status: 400 })
   }
 
-  // 2. Write manifest to file
-  await fs.writeFile('manifest.json', JSON.stringify(manifest, null, 2))
+  // Write files to disk
+  for (const file of result.files) {
+    const filePath = path.join(outputDir, file.path)
+    await mkdir(path.dirname(filePath), { recursive: true })
+    await writeFile(filePath, file.content)
+  }
 
-  // 3. Run archetype generate
-  const { stdout, stderr } = await execAsync(
-    'npx archetype generate manifest.json --json'
-  )
-
-  return Response.json(JSON.parse(stdout))
+  return Response.json({
+    success: true,
+    entities: result.entities,
+    filesWritten: result.files.length,
+    outputDir
+  })
 }
 ```
 
-### 3. Create the Chat Interface
+#### File 3: Simple Chat UI
 
 ```typescript
 // app/page.tsx
 'use client'
-
 import { useState } from 'react'
 
-export default function Builder() {
-  const [prompt, setPrompt] = useState('')
-  const [result, setResult] = useState(null)
+export default function AIAppBuilder() {
+  const [input, setInput] = useState('')
+  const [status, setStatus] = useState<'idle' | 'generating' | 'done'>('idle')
+  const [result, setResult] = useState<any>(null)
 
   async function handleGenerate() {
-    // 1. Send prompt to AI to generate manifest
-    const aiResponse = await fetch('/api/ai', {
+    setStatus('generating')
+    const res = await fetch('/api/generate', {
       method: 'POST',
-      body: JSON.stringify({ prompt })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: input })
     })
-    const { manifest } = await aiResponse.json()
-
-    // 2. Generate code from manifest
-    const genResponse = await fetch('/api/generate', {
-      method: 'POST',
-      body: JSON.stringify({ manifest })
-    })
-    const result = await genResponse.json()
-
-    setResult(result)
+    const data = await res.json()
+    setResult(data)
+    setStatus('done')
   }
 
   return (
-    <div>
-      <textarea
-        value={prompt}
-        onChange={e => setPrompt(e.target.value)}
-        placeholder="Describe your app..."
-      />
-      <button onClick={handleGenerate}>Generate</button>
-      {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">AI App Builder</h1>
+        <p className="text-gray-600 mb-6">Describe your app and get working code.</p>
+
+        <textarea
+          className="w-full h-32 p-4 border rounded-lg mb-4"
+          placeholder="I want a task manager where users can create projects and assign tasks to team members..."
+          value={input}
+          onChange={e => setInput(e.target.value)}
+        />
+
+        <button
+          onClick={handleGenerate}
+          disabled={status === 'generating'}
+          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium disabled:opacity-50"
+        >
+          {status === 'generating' ? 'Generating...' : 'Generate App'}
+        </button>
+
+        {result && (
+          <div className="mt-6 p-4 bg-white rounded-lg border">
+            <h2 className="font-bold text-lg mb-2">
+              {result.success ? '✅ App Generated!' : '❌ Error'}
+            </h2>
+            {result.success ? (
+              <>
+                <p className="text-gray-600 mb-2">
+                  Created {result.filesWritten} files with entities: {result.entities.join(', ')}
+                </p>
+                <code className="block bg-gray-100 p-2 rounded text-sm">
+                  cd {result.outputDir} && npm install && npx drizzle-kit push && npm run dev
+                </code>
+              </>
+            ) : (
+              <ul className="text-red-600">
+                {result.errors.map((e: any, i: number) => (
+                  <li key={i}>{e.message}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 ```
+
+Your AI App Builder is ready. Run it with `npm run dev`.
+
+---
+
+### Part 2: Using the AI App Builder
+
+A user opens your AI App Builder and types:
+
+> "I want a project management app where teams can create projects, add tasks with priorities (low, medium, high), assign tasks to members, and track due dates"
+
+The AI App Builder:
+1. Sends this to OpenAI → gets a manifest
+2. Validates with archetype-engine
+3. Generates backend (schema, API, hooks)
+4. Generates UI pages (list, create forms)
+5. Writes all files to `./generated-app`
+
+---
+
+### Part 3: The Generated App
+
+The user gets a complete Next.js app:
+
+```
+generated-app/
+├── generated/
+│   ├── db/
+│   │   └── schema.ts              # Drizzle tables
+│   ├── schemas/
+│   │   ├── team.ts                # Zod validation
+│   │   ├── project.ts
+│   │   ├── task.ts
+│   │   └── member.ts
+│   ├── trpc/routers/
+│   │   ├── team.ts                # CRUD endpoints
+│   │   ├── project.ts
+│   │   ├── task.ts
+│   │   └── member.ts
+│   └── hooks/
+│       ├── useTeam.ts             # React Query hooks
+│       ├── useProject.ts
+│       ├── useTask.ts
+│       └── useMember.ts
+├── app/(generated)/
+│   ├── team/
+│   │   ├── page.tsx               # Team list
+│   │   └── new/page.tsx           # Create team form
+│   ├── project/
+│   │   ├── page.tsx               # Project list
+│   │   └── new/page.tsx           # Create project form
+│   ├── task/
+│   │   ├── page.tsx               # Task list with priority
+│   │   └── new/page.tsx           # Create task form
+│   └── member/
+│       ├── page.tsx               # Member list
+│       └── new/page.tsx           # Add member form
+└── package.json
+```
+
+The user runs:
+
+```bash
+cd generated-app
+npm install
+npx drizzle-kit push
+npm run dev
+```
+
+And they have a working app:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Tasks                                           [Add Task] │
+├─────────────────────────────────────────────────────────────┤
+│  title          │ priority │ dueDate    │ assignee         │
+├─────────────────────────────────────────────────────────────┤
+│  Setup database │ high     │ 2024-01-15 │ Alice            │
+│  Write tests    │ medium   │ 2024-01-20 │ Bob              │
+│  Deploy app     │ low      │ 2024-01-25 │ Charlie          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Why archetype-engine Makes This Work
+
+| Without archetype-engine | With archetype-engine |
+|--------------------------|----------------------|
+| AI generates 15+ files that must stay in sync | AI generates 1 JSON manifest |
+| You write schema → validation → API → hooks manually | Engine generates all of it |
+| Errors are unstructured strings | Structured errors with suggestions |
+| Type safety depends on AI | Types guaranteed by engine |
+
+**archetype-engine handles the hard part**: keeping database schema, validation, API, and hooks perfectly in sync. Your AI App Builder just needs to generate the manifest and simple UI pages
 
 ## Programmatic API
 
