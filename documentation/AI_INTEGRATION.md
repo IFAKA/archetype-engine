@@ -311,13 +311,36 @@ npm install archetype-engine openai
 ```typescript
 // lib/generate-app.ts
 import { validateManifest, parseManifestJSON, getTemplate, runTemplate } from 'archetype-engine'
-import type { ManifestIR } from 'archetype-engine'
 import OpenAI from 'openai'
 
 const openai = new OpenAI()
 
-// Convert natural language to archetype manifest
-async function createManifest(description: string) {
+export async function generateApp(description: string) {
+  // 1. AI generates manifest from user description
+  const { manifest: manifestJSON, ui: uiFiles } = await askAI(description)
+
+  // 2. Validate manifest
+  const validation = validateManifest(manifestJSON)
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors }
+  }
+
+  // 3. archetype-engine generates backend (schema, API, hooks)
+  const manifest = parseManifestJSON(manifestJSON)
+  const template = await getTemplate('nextjs-drizzle-trpc')
+  const backendFiles = await runTemplate(template!, manifest)
+
+  // 4. Combine backend (from archetype) + UI (from AI)
+  return {
+    success: true,
+    files: [...backendFiles, ...uiFiles],
+    entities: manifest.entities.map(e => e.name),
+    manifest: manifestJSON
+  }
+}
+
+// AI generates both: manifest for archetype AND UI components using the hooks
+async function askAI(description: string) {
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -328,151 +351,54 @@ async function createManifest(description: string) {
   return JSON.parse(response.choices[0].message.content!)
 }
 
-// Generate UI components from manifest
-function generateUIPages(manifest: ManifestIR) {
-  const pages: { path: string; content: string }[] = []
+const SYSTEM_PROMPT = `You are an AI app builder. Given a user's app description, generate:
 
-  for (const entity of manifest.entities) {
-    const name = entity.name
-    const nameLower = name.toLowerCase()
-    const fields = Object.keys(entity.fields)
+1. A "manifest" for archetype-engine (generates backend: database, API, hooks)
+2. "ui" components that USE the hooks archetype will generate
 
-    // List page
-    pages.push({
-      path: `app/(generated)/${nameLower}/page.tsx`,
-      content: `'use client'
-import { use${name}s } from '@/generated/hooks/use${name}'
-import Link from 'next/link'
-
-export default function ${name}List() {
-  const { data, isLoading } = use${name}s()
-  if (isLoading) return <p>Loading...</p>
-  return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">${name}s</h1>
-        <Link href="/${nameLower}/new" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Add ${name}
-        </Link>
-      </div>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-100">
-            ${fields.map(f => `<th className="p-2 text-left">${f}</th>`).join('\n            ')}
-          </tr>
-        </thead>
-        <tbody>
-          {data?.map(item => (
-            <tr key={item.id} className="border-t">
-              ${fields.map(f => `<td className="p-2">{String(item.${f})}</td>`).join('\n              ')}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}`
-    })
-
-    // Create form page
-    pages.push({
-      path: `app/(generated)/${nameLower}/new/page.tsx`,
-      content: `'use client'
-import { useCreate${name} } from '@/generated/hooks/use${name}'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-
-export default function Create${name}() {
-  const router = useRouter()
-  const create = useCreate${name}()
-  const [form, setForm] = useState({ ${fields.map(f => `${f}: ''`).join(', ')} })
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await create.mutateAsync(form)
-    router.push('/${nameLower}')
-  }
-
-  return (
-    <div className="p-8 max-w-md">
-      <h1 className="text-2xl font-bold mb-4">Create ${name}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        ${fields.map(f => `<input
-          className="w-full border p-2 rounded"
-          placeholder="${f}"
-          value={form.${f}}
-          onChange={e => setForm({ ...form, ${f}: e.target.value })}
-        />`).join('\n        ')}
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full">
-          Create
-        </button>
-      </form>
-    </div>
-  )
-}`
-    })
-  }
-
-  return pages
-}
-
-// Main function: generate complete app
-export async function generateApp(description: string) {
-  // 1. AI creates manifest from description
-  const manifestJSON = await createManifest(description)
-
-  // 2. Validate manifest
-  const validation = validateManifest(manifestJSON)
-  if (!validation.valid) {
-    return { success: false, errors: validation.errors }
-  }
-
-  // 3. archetype-engine generates backend
-  const manifest = parseManifestJSON(manifestJSON)
-  const template = await getTemplate('nextjs-drizzle-trpc')
-  const backendFiles = await runTemplate(template!, manifest)
-
-  // 4. Generate UI pages using the hooks
-  const uiPages = generateUIPages(manifest)
-
-  return {
-    success: true,
-    files: [...backendFiles, ...uiPages],
-    entities: manifest.entities.map(e => e.name),
-    manifest: manifestJSON
-  }
-}
-
-const SYSTEM_PROMPT = `You convert app descriptions into archetype-engine JSON manifests.
-
-Return ONLY valid JSON:
+Return JSON with this structure:
 {
-  "entities": [
-    {
-      "name": "User",
-      "fields": {
-        "email": { "type": "text", "email": true, "unique": true },
-        "name": { "type": "text" }
+  "manifest": {
+    "entities": [
+      {
+        "name": "Task",
+        "fields": {
+          "title": { "type": "text" },
+          "done": { "type": "boolean", "default": false }
+        },
+        "relations": {
+          "assignee": { "type": "hasOne", "entity": "User" }
+        }
       }
-    },
+    ],
+    "database": { "type": "sqlite", "file": "./app.db" },
+    "auth": { "enabled": true, "providers": ["credentials"] }
+  },
+  "ui": [
     {
-      "name": "Task",
-      "fields": {
-        "title": { "type": "text" },
-        "done": { "type": "boolean", "default": false }
-      },
-      "relations": {
-        "assignee": { "type": "hasOne", "entity": "User" }
-      }
+      "path": "app/tasks/page.tsx",
+      "content": "'use client'\\nimport { useTasks } from '@/generated/hooks/useTask'\\n\\nexport default function TasksPage() {\\n  const { data: tasks, isLoading } = useTasks()\\n  if (isLoading) return <p>Loading...</p>\\n  return (\\n    <div className=\\"p-8\\">\\n      <h1 className=\\"text-2xl font-bold mb-4\\">Tasks</h1>\\n      <ul>\\n        {tasks?.map(t => <li key={t.id}>{t.title}</li>)}\\n      </ul>\\n    </div>\\n  )\\n}"
     }
-  ],
-  "database": { "type": "sqlite", "file": "./app.db" },
-  "auth": { "enabled": true, "providers": ["credentials"] }
+  ]
 }
 
-Field types: text, number, boolean, date
-Text validations: email, url, min, max, unique, oneOf
-Number validations: min, max, integer, positive`
+## Manifest format (for archetype-engine)
+- entities[].name: PascalCase (User, Task, Project)
+- entities[].fields: { fieldName: { type: "text|number|boolean|date", ...validations } }
+- entities[].relations: { name: { type: "hasOne|hasMany", entity: "TargetEntity" } }
+- Field validations: email, url, min, max, unique, oneOf, integer, positive
+
+## UI components (use the hooks archetype generates)
+For each entity "Task", archetype generates these hooks:
+- useTasks() - list all
+- useTask(id) - get one
+- useCreateTask() - create mutation
+- useUpdateTask() - update mutation
+- useDeleteTask() - delete mutation
+
+Generate React components that import and use these hooks.
+Create pages for: list view, detail view, create form, edit form.
+Use Tailwind CSS for styling.`
 ```
 
 #### File 2: API Endpoint
@@ -593,11 +519,15 @@ A user opens your AI App Builder and types:
 > "I want a project management app where teams can create projects, add tasks with priorities (low, medium, high), assign tasks to members, and track due dates"
 
 The AI App Builder:
-1. Sends this to OpenAI → gets a manifest
-2. Validates with archetype-engine
-3. Generates backend (schema, API, hooks)
-4. Generates UI pages (list, create forms)
-5. Writes all files to `./generated-app`
+1. Sends description to AI
+2. AI returns:
+   - **manifest**: entities, fields, relations (for archetype-engine)
+   - **ui**: React components that use the hooks archetype will generate
+3. archetype-engine validates manifest → generates backend (schema, API, hooks)
+4. Combines backend files + AI-generated UI files
+5. Writes complete app to `./generated-app`
+
+The key: **AI generates the UI components that use archetype's hooks**. The AI knows that archetype will create `useTasks()`, `useCreateTask()`, etc., so it generates pages that import and use them
 
 ---
 
@@ -670,12 +600,16 @@ And they have a working app:
 
 | Without archetype-engine | With archetype-engine |
 |--------------------------|----------------------|
-| AI generates 15+ files that must stay in sync | AI generates 1 JSON manifest |
-| You write schema → validation → API → hooks manually | Engine generates all of it |
-| Errors are unstructured strings | Structured errors with suggestions |
+| AI generates 15+ backend files that must stay in sync | AI generates 1 JSON manifest for backend |
+| AI must understand Drizzle, Zod, tRPC internals | AI just describes entities and fields |
+| Errors are unstructured strings | Structured errors with fix suggestions |
 | Type safety depends on AI | Types guaranteed by engine |
 
-**archetype-engine handles the hard part**: keeping database schema, validation, API, and hooks perfectly in sync. Your AI App Builder just needs to generate the manifest and simple UI pages
+**The division of labor:**
+- **archetype-engine**: Generates the backend (schema, validation, API, hooks) - the hard part that must stay in sync
+- **AI**: Generates the manifest + UI components that use the hooks - the creative part
+
+The AI doesn't need to understand database schemas or tRPC. It just describes entities and writes React components that import `useTasks()`, `useCreateTask()`, etc. archetype-engine ensures those hooks exist and work correctly
 
 ## Programmatic API
 
