@@ -41,7 +41,7 @@ export interface ObservabilityConfig {
   }
   telemetry?: {
     enabled: boolean
-    events?: ('create' | 'update' | 'delete')[]
+    events?: ('create' | 'update' | 'remove')[]
   }
   audit?: {
     enabled: boolean

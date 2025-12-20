@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archetype Engine Banner</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0d1117;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .banner {
+      width: 1280px;
+      height: 640px;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Animated grid background */
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(88, 166, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(88, 166, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* Glow effects */
+    .glow-1 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(136, 58, 234, 0.15) 0%, transparent 70%);
+      top: -200px;
+      left: -100px;
+    }
+
+    .glow-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(58, 134, 234, 0.12) 0%, transparent 70%);
+      bottom: -150px;
+      right: -50px;
+    }
+
+    .glow-3 {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(45, 212, 191, 0.1) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Content container */
+    .content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      height: 100%;
+      padding: 60px;
+    }
+
+    /* Left side - branding */
+    .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #3b82f6 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 36px;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 8px 32px rgba(168, 85, 247, 0.4);
+    }
+
+    .title {
+      font-size: 56px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #c4b5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -2px;
+    }
+
+    .tagline {
+      font-size: 22px;
+      color: #8b949e;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+
+    .tagline strong {
+      color: #c9d1d9;
+      font-weight: 600;
+    }
+
+    /* Flow visualization */
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .flow-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #c9d1d9;
+    }
+
+    .flow-item.input {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%);
+      border-color: rgba(168, 85, 247, 0.4);
+      color: #c4b5fd;
+    }
+
+    .flow-arrow {
+      color: #6366f1;
+      font-size: 20px;
+    }
+
+    .flow-outputs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .flow-output {
+      padding: 8px 12px;
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.3);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #5eead4;
+    }
+
+    /* Right side - code preview */
+    .right {
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin-left: 40px;
+    }
+
+    .code-window {
+      background: #161b22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .code-dot.red { background: #ff5f56; }
+    .code-dot.yellow { background: #ffbd2e; }
+    .code-dot.green { background: #27ca40; }
+
+    .code-filename {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #6e7681;
+    }
+
+    .code-body {
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .code-line {
+      display: flex;
+    }
+
+    .code-line-number {
+      width: 24px;
+      color: #484f58;
+      user-select: none;
+      text-align: right;
+      margin-right: 16px;
+    }
+
+    .keyword { color: #ff7b72; }
+    .function { color: #d2a8ff; }
+    .string { color: #a5d6ff; }
+    .property { color: #79c0ff; }
+    .method { color: #7ee787; }
+    .punctuation { color: #8b949e; }
+    .comment { color: #6e7681; }
+    .type { color: #ffa657; }
+
+    /* Badge */
+    .badge {
+      position: absolute;
+      top: 40px;
+      right: 60px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: #3fb950;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(63, 185, 80, 0.6);
+    }
+
+    /* Bottom tech stack */
+    .tech-stack {
+      position: absolute;
+      bottom: 40px;
+      right: 60px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .tech-item {
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      font-size: 11px;
+      color: #6e7681;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <!-- Background effects -->
+    <div class="grid-bg"></div>
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+    <div class="glow-3"></div>
+
+    <!-- Badge -->
+    <div class="badge">
+      <span class="badge-dot"></span>
+      <span>v2.0</span>
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+      <div class="left">
+        <div class="logo-container">
+          <div class="logo-icon">A</div>
+          <span class="title">Archetype</span>
+        </div>
+
+        <p class="tagline">
+          <strong>Define once.</strong> Generate type-safe CRUD.<br>
+          A declarative engine for fullstack TypeScript.
+        </p>
+
+        <div class="flow">
+          <div class="flow-item input">defineEntity()</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-outputs">
+            <div class="flow-output">Drizzle</div>
+            <div class="flow-output">Zod</div>
+            <div class="flow-output">tRPC</div>
+            <div class="flow-output">Hooks</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="code-window">
+          <div class="code-header">
+            <div class="code-dot red"></div>
+            <div class="code-dot yellow"></div>
+            <div class="code-dot green"></div>
+            <span class="code-filename">user.ts</span>
+          </div>
+          <div class="code-body">
+            <div class="code-line">
+              <span class="code-line-number">1</span>
+              <span><span class="keyword">export const</span> <span class="type">User</span> <span class="punctuation">=</span> <span class="function">defineEntity</span><span class="punctuation">(</span><span class="string">'User'</span><span class="punctuation">,</span> <span class="punctuation">{</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">2</span>
+              <span>  <span class="property">fields</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">3</span>
+              <span>    <span class="property">email</span><span class="punctuation">:</span> <span class="function">text</span><span class="punctuation">().</span><span class="method">required</span><span class="punctuation">().</span><span class="method">email</span><span class="punctuation">(),</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">4</span>
+              <span>    <span class="property">name</span><span class="punctuation">:</span> <span class="function">text</span><span class="punctuation">().</span><span class="method">min</span><span class="punctuation">(</span><span class="string">2</span><span class="punctuation">).</span><span class="method">max</span><span class="punctuation">(</span><span class="string">100</span><span class="punctuation">),</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">5</span>
+              <span>  <span class="punctuation">},</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">6</span>
+              <span>  <span class="property">relations</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">7</span>
+              <span>    <span class="property">posts</span><span class="punctuation">:</span> <span class="function">hasMany</span><span class="punctuation">(</span><span class="string">'Post'</span><span class="punctuation">),</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">8</span>
+              <span>  <span class="punctuation">}</span></span>
+            </div>
+            <div class="code-line">
+              <span class="code-line-number">9</span>
+              <span><span class="punctuation">})</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tech stack -->
+    <div class="tech-stack">
+      <div class="tech-item">TypeScript</div>
+      <div class="tech-item">Next.js</div>
+      <div class="tech-item">Drizzle</div>
+      <div class="tech-item">tRPC</div>
+    </div>
+  </div>
+</body>
+</html>

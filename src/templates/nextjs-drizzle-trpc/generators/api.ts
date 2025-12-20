@@ -106,8 +106,8 @@ export const ${lowerName}Router = router({
       return result[0]
     }),
 
-  // Delete ${name}
-  delete: ${procedureType}
+  // Remove ${name}
+  remove: ${procedureType}
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {${useSoftDelete ? `
       // Soft delete

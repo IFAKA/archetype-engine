@@ -180,6 +180,17 @@ function updatePackageJson(packageJsonPath: string): void {
 async function installDependencies(targetDir: string, config: InitConfig): Promise<void> {
   const { deps, devDeps } = getDependencies(config)
 
+  // Check if archetype-engine is symlinked (npm link) before installing
+  // npm install can remove manually linked packages
+  const archetypeLinkPath = path.join(targetDir, 'node_modules', 'archetype-engine')
+  let wasSymlinked = false
+  try {
+    const stat = fs.lstatSync(archetypeLinkPath)
+    wasSymlinked = stat.isSymbolicLink()
+  } catch {
+    // Path doesn't exist, not linked
+  }
+
   // Install production dependencies
   if (deps.length > 0) {
     await runNpmInstall(targetDir, deps, false)
@@ -188,6 +199,16 @@ async function installDependencies(targetDir: string, config: InitConfig): Promi
   // Install dev dependencies
   if (devDeps.length > 0) {
     await runNpmInstall(targetDir, devDeps, true)
+  }
+
+  // Restore npm link if it was removed by npm install
+  if (wasSymlinked) {
+    try {
+      fs.lstatSync(archetypeLinkPath)
+    } catch {
+      // Link was removed, restore it
+      await runNpmLink(targetDir)
+    }
   }
 }
 
@@ -216,6 +237,29 @@ function runNpmInstall(targetDir: string, packages: string[], isDev: boolean): P
 
     child.on('error', (error) => {
       reject(error)
+    })
+  })
+}
+
+function runNpmLink(targetDir: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('npm', ['link', 'archetype-engine'], {
+      cwd: targetDir,
+      stdio: 'pipe',
+    })
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve()
+      } else {
+        // Non-fatal - user can manually run npm link
+        resolve()
+      }
+    })
+
+    child.on('error', () => {
+      // Non-fatal
+      resolve()
     })
   })
 }

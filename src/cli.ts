@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as http from 'http'
 import { exec } from 'child_process'
+import { createRequire } from 'module'
 import { ManifestIR } from './manifest'
 import { generateERDFromIR, saveERDFromIR } from './generators/erd-ir'
 import { init } from './init'
@@ -48,26 +49,27 @@ function loadManifest(configFile: string): ManifestIR {
     process.exit(1)
   }
 
-  // Clear require cache for fresh load
-  delete require.cache[absolutePath]
-
   // Get the config file's directory for module resolution
   const configDir = path.dirname(absolutePath)
-  const projectNodeModules = path.join(configDir, 'node_modules')
 
-  // Add project's node_modules to NODE_PATH for module resolution
-  // This ensures npm link and local dependencies are found when loading the config
-  if (fs.existsSync(projectNodeModules)) {
-    const currentNodePath = process.env.NODE_PATH || ''
-    process.env.NODE_PATH = projectNodeModules + path.delimiter + currentNodePath
-    // Force Node to re-read NODE_PATH
-    require('module').Module._initPaths()
-  }
+  // Create a require function rooted in the project directory
+  // This ensures npm link and local dependencies are resolved correctly
+  const projectRequire = createRequire(path.join(configDir, 'package.json'))
+
+  // Clear require cache for fresh load
+  delete projectRequire.cache[absolutePath]
 
   // Register TypeScript if needed
   if (absolutePath.endsWith('.ts')) {
     try {
-      require('ts-node').register({
+      // Use the project's ts-node if available, fall back to ours
+      let tsNode
+      try {
+        tsNode = projectRequire('ts-node')
+      } catch {
+        tsNode = require('ts-node')
+      }
+      tsNode.register({
         transpileOnly: true,
         cwd: configDir,
         compilerOptions: {
@@ -80,8 +82,8 @@ function loadManifest(configFile: string): ManifestIR {
     }
   }
 
-  // Load the module
-  const loadedModule = require(absolutePath)
+  // Load the module using the project-rooted require
+  const loadedModule = projectRequire(absolutePath)
   const manifest = loadedModule.default || loadedModule
 
   if (!manifest.entities) {

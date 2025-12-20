@@ -180,7 +180,7 @@ describe('defineManifest()', () => {
         },
         telemetry: {
           enabled: true,
-          events: ['create', 'update', 'delete'],
+          events: ['create', 'update', 'remove'],
         },
         audit: {
           enabled: true,

@@ -304,7 +304,7 @@ describe('tRPC Router Generation', () => {
     expect(productRouter).toContain('get:')
     expect(productRouter).toContain('create:')
     expect(productRouter).toContain('update:')
-    expect(productRouter).toContain('delete:')
+    expect(productRouter).toContain('remove:')
   })
 
   it('uses static schemas (not i18n)', () => {
@@ -361,9 +361,9 @@ describe('React Hooks Generation', () => {
     expect(productHook).toContain('export function useProductEditForm')
   })
 
-  it('generates useDelete hook', () => {
+  it('generates useRemove hook', () => {
     const productHook = hooks.Product
-    expect(productHook).toContain('export function useProductDelete')
+    expect(productHook).toContain('export function useProductRemove')
   })
 
   it('generates list hook', () => {

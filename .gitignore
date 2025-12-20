@@ -39,3 +39,6 @@ docs/
 # Temporary files
 *.tmp
 *.temp
+
+# Generated assets (upload externally)
+banner.png

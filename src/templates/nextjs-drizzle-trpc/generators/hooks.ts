@@ -127,17 +127,17 @@ ${tDeclaration}
   }
 }
 
-// ============ DELETE ============
-export function use${name}Delete() {
+// ============ REMOVE ============
+export function use${name}Remove() {
   const utils = trpc.useUtils()
-  const mutation = trpc.${lowerName}.delete.useMutation({
+  const mutation = trpc.${lowerName}.remove.useMutation({
     onSuccess: () => {
       utils.${lowerName}.list.invalidate()
     },
   })
 
   return {
-    delete: (id: string) => mutation.mutate({ id }),
+    remove: (id: string) => mutation.mutate({ id }),
     isPending: mutation.isPending,
     error: mutation.error,
     isSuccess: mutation.isSuccess,
