@@ -171,38 +171,46 @@ relations: {
 
 ## Using Generated Hooks
 
+Replace `app/page.tsx` with this to see it in action:
+
 ```typescript
-'use client'
-import { useTasks, useTaskForm, useTaskDelete } from '@/generated/hooks/useTask'
+"use client";
 
-function TaskList() {
-  const { data: tasks } = useTasks()
-  const { delete: deleteTask } = useTaskDelete()
+import { useTasks, useTaskForm, useTaskRemove } from "@/generated/hooks/useTask";
 
-  return (
-    <ul>
-      {tasks?.map(task => (
-        <li key={task.id}>
-          {task.title}
-          <button onClick={() => deleteTask(task.id)}>Delete</button>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function CreateTaskForm() {
-  const { register, submit, formState: { errors }, isPending } = useTaskForm()
+export default function Home() {
+  const { data, isPending } = useTasks();
+  const { remove } = useTaskRemove();
+  const { submit, register, formState } = useTaskForm();
 
   return (
-    <form onSubmit={submit}>
-      <input {...register('title')} />
-      {errors.title && <span>{errors.title.message}</span>}
-      <button disabled={isPending}>Create</button>
-    </form>
-  )
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
+      <form onSubmit={submit} className="flex gap-2">
+        <input {...register("title")} placeholder="New task..." className="border px-2 py-1" />
+        <button className="bg-black px-3 py-1 text-white">Add</button>
+      </form>
+      {formState.errors.title && <p className="text-red-500">{formState.errors.title.message}</p>}
+      <ul className="w-64">
+        {isPending ? (
+          <p>Loading...</p>
+        ) : (
+          data?.map((task) => (
+            <li key={task.id} className="flex justify-between border-b py-1">
+              <span>{task.title}</span>
+              <button onClick={() => remove(task.id)} className="text-red-500">×</button>
+            </li>
+          ))
+        )}
+      </ul>
+    </main>
+  );
 }
 ```
+
+**What you get:**
+- `useTasks()` — Fetches all tasks with React Query caching
+- `useTaskForm()` — Form with Zod validation, auto-invalidates on success
+- `useTaskRemove()` — Delete mutation with optimistic updates
 
 ## CLI Commands
 
