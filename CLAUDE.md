@@ -93,6 +93,24 @@ The name "Archetype" reflects the core concept: you define the archetypal data m
 - `src/init/` - Init flow (creates config + entities + infrastructure)
 - `src/index.ts` - Package entry point, exports all public APIs
 
+### AI Module (`src/ai/`)
+
+Tools for building AI-powered app builders. Import from `archetype-engine/ai`.
+
+- `src/ai/types.ts` - Type definitions for tools and ManifestBuilder
+- `src/ai/state.ts` - ManifestBuilder class (tracks entities across AI tool calls)
+- `src/ai/tools.ts` - Framework-agnostic tool definitions (add_entity, set_database, etc.)
+- `src/ai/adapters/openai.ts` - OpenAI function calling format
+- `src/ai/adapters/anthropic.ts` - Anthropic tool use format
+- `src/ai/adapters/vercel.ts` - Vercel AI SDK format with Zod schemas
+
+```typescript
+import { createManifestBuilder, aiTools } from 'archetype-engine/ai'
+
+const builder = createManifestBuilder()
+const tools = aiTools.vercel(builder)  // or aiTools.openai(), aiTools.anthropic()
+```
+
 ### Config Format
 
 ```typescript
