@@ -213,7 +213,7 @@ npx archetype generate manifest.json --json
 - `--json` - Output as structured JSON
 - `--stdin` - Read JSON from stdin (for piping)
 
-See the full [AI Integration Guide](docs/AI_INTEGRATION.md) for JSON schema reference, error codes, and example system prompts.
+See the full [AI Integration Guide](documentation/AI_INTEGRATION.md) for JSON schema reference, error codes, and example system prompts.
 
 ## Database Options
 
