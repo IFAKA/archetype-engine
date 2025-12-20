@@ -1,7 +1,7 @@
 // TUI prompts for archetype init
 
 import * as p from '@clack/prompts'
-import type { DatabaseType, InitConfig } from './dependencies'
+import type { DatabaseType, ModeType, InitConfig } from './dependencies'
 import { listTemplates } from '../template/registry'
 
 export async function runPrompts(): Promise<InitConfig | null> {
@@ -30,19 +30,54 @@ export async function runPrompts(): Promise<InitConfig | null> {
     return null
   }
 
-  // Ask for database
-  const database = await p.select({
-    message: 'Which database would you like to use?',
+  // Ask for mode (full or headless)
+  const mode = await p.select({
+    message: 'What type of project are you building?',
     options: [
-      { value: 'sqlite', label: 'SQLite', hint: 'Simple, file-based, great for development' },
-      { value: 'postgres', label: 'PostgreSQL', hint: 'Production-ready, full-featured' },
-      { value: 'mysql', label: 'MySQL', hint: 'Widely used, good performance' },
+      { value: 'full', label: 'Full Stack', hint: 'Local database with Drizzle ORM' },
+      { value: 'headless', label: 'Headless', hint: 'External APIs, no local database' },
     ],
   })
 
-  if (p.isCancel(database)) {
+  if (p.isCancel(mode)) {
     p.cancel('Setup cancelled.')
     return null
+  }
+
+  let database: DatabaseType | undefined
+  let externalApiUrl: string | undefined
+
+  if (mode === 'full') {
+    // Full mode: ask for database
+    const dbChoice = await p.select({
+      message: 'Which database would you like to use?',
+      options: [
+        { value: 'sqlite', label: 'SQLite', hint: 'Simple, file-based, great for development' },
+        { value: 'postgres', label: 'PostgreSQL', hint: 'Production-ready, full-featured' },
+        { value: 'mysql', label: 'MySQL', hint: 'Widely used, good performance' },
+      ],
+    })
+
+    if (p.isCancel(dbChoice)) {
+      p.cancel('Setup cancelled.')
+      return null
+    }
+
+    database = dbChoice as DatabaseType
+  } else {
+    // Headless mode: ask for API URL (optional)
+    const apiUrl = await p.text({
+      message: 'External API base URL (or env variable like env:API_URL):',
+      placeholder: 'env:API_URL',
+      defaultValue: 'env:API_URL',
+    })
+
+    if (p.isCancel(apiUrl)) {
+      p.cancel('Setup cancelled.')
+      return null
+    }
+
+    externalApiUrl = apiUrl as string
   }
 
   const auth = await p.confirm({
@@ -93,7 +128,9 @@ export async function runPrompts(): Promise<InitConfig | null> {
   }
 
   const includeExamples = await p.confirm({
-    message: 'Include example entities (Task)?',
+    message: mode === 'headless'
+      ? 'Include example entity (Product with external API)?'
+      : 'Include example entities (Task)?',
     initialValue: true,
   })
 
@@ -104,7 +141,9 @@ export async function runPrompts(): Promise<InitConfig | null> {
 
   return {
     template: template as string,
-    database: database as DatabaseType,
+    mode: mode as ModeType,
+    database,
+    externalApiUrl,
     auth: auth as boolean,
     i18n,
     includeExamples: includeExamples as boolean,
@@ -113,26 +152,46 @@ export async function runPrompts(): Promise<InitConfig | null> {
 
 // Display the configuration summary
 export function displayConfigSummary(config: InitConfig): void {
-  p.note(
-    [
-      `Template: ${config.template}`,
-      `Database: ${config.database}`,
-      `Authentication: ${config.auth ? 'Yes (next-auth)' : 'No'}`,
-      `Internationalization: ${config.i18n ? config.i18n.join(', ') : 'No'}`,
-      `Example entities: ${config.includeExamples ? 'Yes' : 'No'}`,
-    ].join('\n'),
-    'Configuration'
+  const lines = [
+    `Template: ${config.template}`,
+    `Mode: ${config.mode === 'headless' ? 'Headless (external APIs)' : 'Full Stack (local DB)'}`,
+  ]
+
+  if (config.mode === 'full' && config.database) {
+    lines.push(`Database: ${config.database}`)
+  }
+
+  if (config.mode === 'headless' && config.externalApiUrl) {
+    lines.push(`API URL: ${config.externalApiUrl}`)
+  }
+
+  lines.push(
+    `Authentication: ${config.auth ? 'Yes (next-auth)' : 'No'}`,
+    `Internationalization: ${config.i18n ? config.i18n.join(', ') : 'No'}`,
+    `Example entities: ${config.includeExamples ? 'Yes' : 'No'}`,
   )
+
+  p.note(lines.join('\n'), 'Configuration')
 }
 
 // Display success message and next steps
-export function displaySuccess(): void {
-  p.outro(`Archetype initialized!
+export function displaySuccess(config: InitConfig): void {
+  if (config.mode === 'headless') {
+    p.outro(`Archetype initialized in headless mode!
+
+Next steps:
+  npx archetype generate    # Generate code from entities
+  npm run dev               # Start development server
+
+Note: No database setup needed - entities will use external APIs.`)
+  } else {
+    p.outro(`Archetype initialized!
 
 Next steps:
   npx archetype generate    # Generate code from entities
   npx drizzle-kit push      # Create database tables
   npm run dev               # Start development server`)
+  }
 }
 
 // Display error

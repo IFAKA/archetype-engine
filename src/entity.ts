@@ -5,6 +5,7 @@
 
 import { FieldBuilder, FieldConfig } from './fields'
 import { RelationBuilder, RelationConfig } from './relations'
+import { ExternalSourceConfig } from './source'
 
 /**
  * Entity definition input - what you write when defining an entity
@@ -18,6 +19,11 @@ export interface EntityDefinition {
   behaviors?: EntityBehaviors
   /** Mark as auth entity for next-auth integration */
   auth?: boolean
+  /**
+   * External API source for this entity.
+   * If not specified, inherits from manifest.source or uses database.
+   */
+  source?: ExternalSourceConfig
 }
 
 /**
@@ -46,6 +52,8 @@ export interface EntityIR {
   behaviors: EntityBehaviors
   /** Whether this is an auth entity */
   auth: boolean
+  /** External API source (optional - inherits from manifest if not specified) */
+  source?: ExternalSourceConfig
 }
 
 // Compile entity definition to IR
@@ -75,6 +83,7 @@ function compileEntity(name: string, definition: EntityDefinition): EntityIR {
       ...definition.behaviors,
     },
     auth: definition.auth || false,
+    source: definition.source,
   }
 }
 

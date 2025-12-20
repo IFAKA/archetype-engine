@@ -10,12 +10,82 @@ function getTableName(entityName: string): string {
   return toSnakeCase(pluralize(entityName))
 }
 
-function generateEntityRouter(entity: EntityIR, manifest: ManifestIR): string {
+/**
+ * Check if entity uses external source (from entity or manifest level)
+ */
+function hasExternalSource(entity: EntityIR, manifest: ManifestIR): boolean {
+  const source = entity.source || manifest.source
+  return source?.type === 'external'
+}
+
+/**
+ * Generate router for entity with external API source
+ */
+function generateExternalEntityRouter(entity: EntityIR, manifest: ManifestIR): string {
+  const name = entity.name
+  const lowerName = name.toLowerCase()
+
+  return `// Auto-generated tRPC router for ${name} (external API)
+// Do not edit manually - regenerate with: npx archetype generate
+
+import { z } from 'zod'
+import { router, publicProcedure } from '@/server/trpc'
+import { ${lowerName}Service } from '@/generated/services/${lowerName}Service'
+import { ${lowerName}CreateSchema, ${lowerName}UpdateSchema } from '@/generated/schemas/${lowerName}'
+
+export const ${lowerName}Router = router({
+  // List all ${name}s
+  list: publicProcedure
+    .input(z.object({
+      page: z.number().optional(),
+      limit: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      return ${lowerName}Service.list(input)
+    }),
+
+  // Get single ${name} by ID
+  get: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      return ${lowerName}Service.get(input.id)
+    }),
+
+  // Create new ${name}
+  create: publicProcedure
+    .input(${lowerName}CreateSchema)
+    .mutation(async ({ input }) => {
+      return ${lowerName}Service.create(input)
+    }),
+
+  // Update ${name}
+  update: publicProcedure
+    .input(z.object({
+      id: z.string(),
+      data: ${lowerName}UpdateSchema,
+    }))
+    .mutation(async ({ input }) => {
+      return ${lowerName}Service.update(input.id, input.data)
+    }),
+
+  // Remove ${name}
+  remove: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      return ${lowerName}Service.delete(input.id)
+    }),
+})
+`
+}
+
+/**
+ * Generate router for entity with database source
+ */
+function generateDatabaseEntityRouter(entity: EntityIR, manifest: ManifestIR): string {
   const name = entity.name
   const lowerName = name.toLowerCase()
   const tableName = getTableName(name)
 
-  const useI18n = manifest.i18n.languages.length > 1
   const useTenancy = manifest.tenancy.enabled
   const useSoftDelete = entity.behaviors.softDelete
 
@@ -123,6 +193,16 @@ export const ${lowerName}Router = router({
     }),
 })
 `
+}
+
+/**
+ * Generate router for entity based on its source type
+ */
+function generateEntityRouter(entity: EntityIR, manifest: ManifestIR): string {
+  if (hasExternalSource(entity, manifest)) {
+    return generateExternalEntityRouter(entity, manifest)
+  }
+  return generateDatabaseEntityRouter(entity, manifest)
 }
 
 function generateAppRouter(entities: EntityIR[]): string {

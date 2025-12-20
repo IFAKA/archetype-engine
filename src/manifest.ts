@@ -4,6 +4,41 @@
  */
 
 import { EntityIR } from './entity'
+import { ExternalSourceConfig } from './source'
+
+/**
+ * Generation mode configuration
+ */
+export interface ModeConfig {
+  /**
+   * 'full' - Generate database schema, API, validation, hooks (default)
+   * 'headless' - Skip database schema, generate validation, hooks, services only
+   * 'api-only' - Generate API layer only (for backend services)
+   */
+  type: 'full' | 'headless' | 'api-only'
+
+  /**
+   * When headless, optionally specify which generators to include
+   * Default: ['validation', 'hooks', 'services', 'i18n']
+   */
+  include?: ('validation' | 'hooks' | 'types' | 'services' | 'i18n')[]
+}
+
+/**
+ * Normalize mode config from shorthand or full config
+ */
+export function normalizeMode(mode?: ModeConfig | 'full' | 'headless' | 'api-only'): ModeConfig {
+  if (!mode || mode === 'full') {
+    return { type: 'full' }
+  }
+  if (mode === 'headless') {
+    return { type: 'headless', include: ['validation', 'hooks', 'services', 'i18n'] }
+  }
+  if (mode === 'api-only') {
+    return { type: 'api-only', include: ['validation', 'services'] }
+  }
+  return mode
+}
 
 /**
  * Database connection configuration
@@ -64,9 +99,24 @@ export interface DefaultBehaviors {
 
 // Manifest input (what user writes)
 export interface ManifestDefinition {
-  template?: string  // Template ID (e.g., 'nextjs-drizzle-trpc')
+  /** Template ID (e.g., 'nextjs-drizzle-trpc') */
+  template?: string
+  /**
+   * Generation mode - 'full' | 'headless' | 'api-only' or ModeConfig object
+   * - 'full': Generate database schema, API, validation, hooks (default)
+   * - 'headless': Skip database schema, generate validation, hooks, services only
+   * - 'api-only': Generate API layer only
+   */
+  mode?: ModeConfig | 'full' | 'headless' | 'api-only'
+  /** Entity definitions */
   entities: EntityIR[]
-  database: DatabaseConfig
+  /**
+   * Global default source for all entities.
+   * Individual entities can override this with their own source.
+   */
+  source?: ExternalSourceConfig
+  /** Database configuration (required for 'full' mode, optional for 'headless') */
+  database?: DatabaseConfig
   auth?: AuthConfig
   i18n?: I18nConfig
   observability?: ObservabilityConfig
@@ -76,9 +126,16 @@ export interface ManifestDefinition {
 
 // Manifest IR output (what CLI and templates consume)
 export interface ManifestIR {
-  template?: string  // Template ID - CLI validates if provided
+  /** Template ID - CLI validates if provided */
+  template?: string
+  /** Normalized mode configuration */
+  mode: ModeConfig
+  /** Entity definitions */
   entities: EntityIR[]
-  database: DatabaseConfig
+  /** Global default source for entities (optional) */
+  source?: ExternalSourceConfig
+  /** Database configuration (optional for headless mode) */
+  database?: DatabaseConfig
   auth: AuthConfig
   i18n: I18nConfig
   observability: ObservabilityConfig
@@ -88,9 +145,21 @@ export interface ManifestIR {
 
 // Compile manifest definition to IR
 function compileManifest(definition: ManifestDefinition): ManifestIR {
+  const mode = normalizeMode(definition.mode)
+
+  // Validate: full mode requires database
+  if (mode.type === 'full' && !definition.database) {
+    throw new Error(
+      `Mode 'full' requires database configuration.\n` +
+      `Fix: Add database config or use mode: 'headless' for frontend-only projects.`
+    )
+  }
+
   return {
     template: definition.template,
+    mode,
     entities: definition.entities,
+    source: definition.source,
     database: definition.database,
     auth: {
       enabled: false,

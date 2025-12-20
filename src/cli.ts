@@ -18,6 +18,7 @@ const args = process.argv.slice(2)
 const templateArg = args.find(a => a.startsWith('--template='))
 const templateOverride = templateArg?.split('=')[1]
 const yesFlag = args.includes('--yes') || args.includes('-y')
+const headlessFlag = args.includes('--headless')
 
 /**
  * Load manifest from TypeScript config file
@@ -271,14 +272,15 @@ if (command === 'generate') {
   serveERD(erd)
 } else if (command === 'init') {
   // Run the TUI init flow
-  init({ yes: yesFlag }).catch(err => {
+  init({ yes: yesFlag, headless: headlessFlag }).catch(err => {
     console.error('Init failed:', err.message)
     process.exit(1)
   })
 } else {
   console.log('Usage:')
-  console.log('  archetype init                 - Create config, infrastructure, and install deps')
-  console.log('  archetype init --yes           - Quick setup with defaults')
+  console.log('  archetype init                 - Interactive setup with prompts')
+  console.log('  archetype init --yes           - Quick setup with defaults (full mode)')
+  console.log('  archetype init --headless      - Quick setup for headless mode (no database)')
   console.log('  archetype generate [config]    - Generate code from entities')
   console.log('  archetype view [config]        - View ERD diagram in browser')
   console.log('')

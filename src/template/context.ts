@@ -28,12 +28,13 @@ export interface GeneratorContext {
     getColumnName: typeof getColumnName
   }
 
-  /** Database info from manifest */
+  /** Database info from manifest (undefined in headless mode) */
   database: {
-    type: 'sqlite' | 'postgres' | 'mysql'
+    type: 'sqlite' | 'postgres' | 'mysql' | undefined
     isSqlite: boolean
     isPostgres: boolean
     isMysql: boolean
+    isHeadless: boolean
   }
 
   /** Resolve import path using aliases */
@@ -47,7 +48,8 @@ export function createContext(
   manifest: ManifestIR,
   config: TemplateConfig
 ): GeneratorContext {
-  const dbType = manifest.database.type
+  const dbType = manifest.database?.type
+  const isHeadless = manifest.mode.type === 'headless' || !manifest.database
 
   return {
     config,
@@ -64,6 +66,7 @@ export function createContext(
       isSqlite: dbType === 'sqlite',
       isPostgres: dbType === 'postgres',
       isMysql: dbType === 'mysql',
+      isHeadless,
     },
     resolvePath: (alias: string) => config.importAliases[alias] || alias,
   }

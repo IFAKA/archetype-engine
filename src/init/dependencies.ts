@@ -1,10 +1,13 @@
 // Configuration types and dependencies for archetype init
 
 export type DatabaseType = 'sqlite' | 'postgres' | 'mysql'
+export type ModeType = 'full' | 'headless'
 
 export interface InitConfig {
   template: string  // Template ID from registry
-  database: DatabaseType
+  mode: ModeType    // Full (with DB) or headless (external APIs)
+  database?: DatabaseType  // Optional - only for full mode
+  externalApiUrl?: string  // Optional - for headless mode
   auth: boolean
   i18n: string[] | null
   includeExamples: boolean
@@ -43,23 +46,57 @@ export const databaseDependencies: Record<DatabaseType, { deps: string[]; devDep
   },
 }
 
+// Headless mode dependencies (no DB, external APIs)
+export const headlessDependencies = [
+  '@trpc/server',
+  '@trpc/client',
+  '@trpc/react-query',
+  '@tanstack/react-query',
+  'zod',
+  'react-hook-form',
+  '@hookform/resolvers',
+]
+
 // Get all dependencies for a given config
 export function getDependencies(config: InitConfig): { deps: string[]; devDeps: string[] } {
+  // Headless mode - no database deps
+  if (config.mode === 'headless') {
+    return {
+      deps: [...headlessDependencies],
+      devDeps: [],
+    }
+  }
+
+  // Full mode - include database deps
   const deps = [...coreDependencies]
   const devDeps = [...coreDevDependencies]
 
   // Add database-specific deps
-  const dbDeps = databaseDependencies[config.database]
-  deps.push(...dbDeps.deps)
-  devDeps.push(...dbDeps.devDeps)
+  if (config.database) {
+    const dbDeps = databaseDependencies[config.database]
+    deps.push(...dbDeps.deps)
+    devDeps.push(...dbDeps.devDeps)
+  }
 
   return { deps, devDeps }
 }
 
 // Get recommended config - template comes from registry
-export function getRecommendedConfig(templateId: string): InitConfig {
+export function getRecommendedConfig(templateId: string, mode: ModeType = 'full'): InitConfig {
+  if (mode === 'headless') {
+    return {
+      template: templateId,
+      mode: 'headless',
+      externalApiUrl: 'env:API_URL',
+      auth: false,
+      i18n: null,
+      includeExamples: true,
+    }
+  }
+
   return {
     template: templateId,
+    mode: 'full',
     database: 'sqlite',
     auth: false,
     i18n: null,

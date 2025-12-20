@@ -21,10 +21,11 @@ export { defineEntity } from './entity'
 export type { EntityDefinition, EntityBehaviors, EntityIR } from './entity'
 
 // Manifest definition
-export { defineManifest, defineConfig } from './manifest'
+export { defineManifest, defineConfig, normalizeMode } from './manifest'
 export type {
   ManifestDefinition,
   ManifestIR,
+  ModeConfig,
   DatabaseConfig,
   AuthConfig,
   I18nConfig,
@@ -32,6 +33,15 @@ export type {
   TenancyConfig,
   DefaultBehaviors,
 } from './manifest'
+
+// External API source
+export { external, resolveEndpoints } from './source'
+export type {
+  ExternalSourceConfig,
+  ExternalSourceOptions,
+  DatabaseSourceConfig,
+  SourceConfig,
+} from './source'
 
 // Legacy type exports (for backwards compatibility)
 export { EntityConfig, PropertyConfig, Manifest, isPropertyConfig } from './types'

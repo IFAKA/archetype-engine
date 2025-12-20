@@ -17,6 +17,7 @@ import { listTemplates } from '../template/registry'
 
 export interface InitOptions {
   yes?: boolean // Use recommended defaults without prompts
+  headless?: boolean // Use headless mode (no database, external APIs)
   template?: string // Template ID (for --yes mode or --template flag)
   directory?: string // Target directory (default: current)
 }
@@ -34,7 +35,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
   // Get configuration
   let config: InitConfig | null
 
-  if (options.yes) {
+  if (options.yes || options.headless) {
     // Use specified template or first available
     const templates = listTemplates()
     if (templates.length === 0) {
@@ -42,7 +43,8 @@ export async function init(options: InitOptions = {}): Promise<void> {
       process.exit(1)
     }
     const templateId = options.template || templates[0].id
-    config = getRecommendedConfig(templateId)
+    const mode = options.headless ? 'headless' : 'full'
+    config = getRecommendedConfig(templateId, mode)
   } else {
     config = await runPrompts()
   }
@@ -65,7 +67,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
     const packageJsonPath = path.join(targetDir, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
       s.start('Adding npm scripts')
-      updatePackageJson(packageJsonPath)
+      updatePackageJson(packageJsonPath, config)
       s.stop('Added npm scripts')
     }
 
@@ -74,7 +76,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
     await installDependencies(targetDir, config)
     s.stop('Installed dependencies')
 
-    displaySuccess()
+    displaySuccess(config)
   } catch (error) {
     s.stop('Error occurred')
     displayError(error instanceof Error ? error.message : 'Unknown error')
@@ -164,11 +166,11 @@ function updateLayoutWithProviders(targetDir: string, structure: ProjectStructur
   fs.writeFileSync(layoutPath, content, 'utf-8')
 }
 
-function updatePackageJson(packageJsonPath: string): void {
+function updatePackageJson(packageJsonPath: string, config: InitConfig): void {
   const content = fs.readFileSync(packageJsonPath, 'utf-8')
   const packageJson = JSON.parse(content)
 
-  const scripts = getPackageJsonScripts()
+  const scripts = getPackageJsonScripts(config)
   packageJson.scripts = {
     ...(packageJson.scripts as Record<string, string> || {}),
     ...scripts,

@@ -217,6 +217,7 @@ export default function Home() {
 ```bash
 npx archetype init           # Interactive setup
 npx archetype init --yes     # Quick setup with defaults (SQLite)
+npx archetype init --headless  # Quick setup for headless mode (no database)
 npx archetype generate       # Generate code from entities
 npx archetype view           # View ERD in browser
 ```
@@ -232,6 +233,79 @@ database: { type: 'postgres', url: process.env.DATABASE_URL }
 
 // MySQL
 database: { type: 'mysql', url: process.env.DATABASE_URL }
+```
+
+## Headless Mode
+
+For frontend-only projects that connect to external APIs instead of a local database:
+
+```typescript
+// archetype.config.ts
+import { defineConfig, external } from 'archetype-engine'
+import { Product } from './archetype/entities/product'
+
+export default defineConfig({
+  template: 'nextjs-drizzle-trpc',
+  mode: 'headless',
+  source: external('env:API_URL'),  // Global API source
+  entities: [Product],
+})
+```
+
+Entities inherit the global source, or can override it:
+
+```typescript
+// archetype/entities/product.ts
+import { defineEntity, text, number, external } from 'archetype-engine'
+
+export const Product = defineEntity('Product', {
+  fields: {
+    sku: text().required(),
+    name: text().required(),
+    price: number().required().positive(),
+  },
+  // Optional: override global source
+  source: external('env:PRODUCTS_API', { pathPrefix: '/v1' }),
+})
+```
+
+**What headless mode generates:**
+- Zod validation schemas
+- Service layer (API client wrappers)
+- tRPC routers (using services instead of database)
+- React hooks
+
+**What it skips:**
+- Drizzle schema (no database)
+- drizzle.config.ts
+
+### External Source Options
+
+```typescript
+// Simple - uses entity name for endpoints
+external('env:API_URL')
+// → GET/POST /products, GET/PUT/DELETE /products/:id
+
+// With path prefix
+external('env:API_URL', { pathPrefix: '/v1' })
+// → /v1/products
+
+// Custom resource name
+external('env:API_URL', { resourceName: 'item' })
+// → /items instead of /products
+
+// Override specific endpoints
+external('env:LEGACY_API', {
+  override: {
+    list: 'GET /catalog/search',
+    get: 'GET /catalog/item/:sku',
+  }
+})
+
+// With authentication
+external('env:API_URL', {
+  auth: { type: 'bearer' }  // or 'api-key'
+})
 ```
 
 ## Development

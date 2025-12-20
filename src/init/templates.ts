@@ -4,6 +4,35 @@ import type { InitConfig, DatabaseType } from './dependencies'
 
 // archetype.config.ts
 export function getConfigTemplate(config: InitConfig): string {
+  // Headless mode config
+  if (config.mode === 'headless') {
+    const i18nConfig = config.i18n
+      ? `
+  i18n: {
+    languages: ${JSON.stringify(config.i18n)},
+    defaultLanguage: '${config.i18n[0]}',
+  },`
+      : ''
+
+    const entityImport = config.includeExamples
+      ? `import { Product } from './archetype/entities/product'`
+      : ''
+    const entities = config.includeExamples ? '[Product]' : '[]'
+    const sourceUrl = config.externalApiUrl || 'env:API_URL'
+
+    return `import { defineConfig, external } from 'archetype-engine'
+${entityImport}
+
+export default defineConfig({
+  template: '${config.template}',
+  mode: 'headless',
+  source: external('${sourceUrl}'),
+  entities: ${entities},${i18nConfig}
+})
+`
+  }
+
+  // Full mode config (with database)
   const dbConfig = config.database === 'sqlite'
     ? `{
     type: 'sqlite',
@@ -44,7 +73,7 @@ export default defineConfig({
 `
 }
 
-// archetype/entities/task.ts (example entity)
+// archetype/entities/task.ts (example entity for full mode)
 export function getTaskEntityTemplate(): string {
   return `import { defineEntity, text, boolean, date } from 'archetype-engine'
 
@@ -62,9 +91,27 @@ export const Task = defineEntity('Task', {
 `
 }
 
+// archetype/entities/product.ts (example entity for headless mode)
+export function getProductEntityTemplate(): string {
+  return `import { defineEntity, text, number } from 'archetype-engine'
+
+// Example entity for headless mode - uses external API
+// The source is inherited from the config's global source
+export const Product = defineEntity('Product', {
+  fields: {
+    sku: text().required().label('SKU'),
+    name: text().required().min(1).max(200).label('Name'),
+    description: text().optional().max(2000).label('Description'),
+    price: number().required().positive().label('Price'),
+    stock: number().optional().integer().min(0).label('Stock'),
+  },
+})
+`
+}
+
 // src/server/db.ts
-export function getDbTemplate(config: InitConfig): string {
-  switch (config.database) {
+export function getDbTemplate(database: DatabaseType): string {
+  switch (database) {
     case 'sqlite':
       return `import { drizzle } from 'drizzle-orm/better-sqlite3'
 import Database from 'better-sqlite3'
@@ -158,7 +205,7 @@ export { handler as GET, handler as POST }
 }
 
 // drizzle.config.ts
-export function getDrizzleConfigTemplate(config: InitConfig): string {
+export function getDrizzleConfigTemplate(database: DatabaseType): string {
   const dialectMap: Record<DatabaseType, string> = {
     sqlite: 'sqlite',
     postgres: 'postgresql',
@@ -176,8 +223,8 @@ export function getDrizzleConfigTemplate(config: InitConfig): string {
 export default defineConfig({
   schema: './generated/db/schema.ts',
   out: './drizzle',
-  dialect: '${dialectMap[config.database]}',
-  dbCredentials: { ${credentialsMap[config.database]} },
+  dialect: '${dialectMap[database]}',
+  dbCredentials: { ${credentialsMap[database]} },
 })
 `
 }
@@ -196,32 +243,57 @@ export function getAllTemplateFiles(config: InitConfig, structure: ProjectStruct
   const prefix = structure.useSrcDir ? 'src/' : ''
 
   const files: TemplateFile[] = [
-    // Config
+    // Config - always needed
     { path: 'archetype.config.ts', content: getConfigTemplate(config) },
-    { path: 'drizzle.config.ts', content: getDrizzleConfigTemplate(config) },
-
-    // Infrastructure
-    { path: `${prefix}server/db.ts`, content: getDbTemplate(config) },
-    { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate() },
-    { path: `${prefix}lib/trpc.ts`, content: getTrpcClientTemplate() },
-    { path: `${prefix}app/providers.tsx`, content: getProvidersTemplate() },
-    { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate() },
   ]
 
-  // Example entity
-  if (config.includeExamples) {
-    files.push({ path: 'archetype/entities/task.ts', content: getTaskEntityTemplate() })
+  if (config.mode === 'headless') {
+    // Headless mode: tRPC but no database
+    files.push(
+      { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate() },
+      { path: `${prefix}lib/trpc.ts`, content: getTrpcClientTemplate() },
+      { path: `${prefix}app/providers.tsx`, content: getProvidersTemplate() },
+      { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate() },
+    )
+
+    // Example entity for headless mode
+    if (config.includeExamples) {
+      files.push({ path: 'archetype/entities/product.ts', content: getProductEntityTemplate() })
+    }
+  } else {
+    // Full mode: database + tRPC
+    // database is guaranteed to be defined in full mode
+    const db = config.database!
+    files.push(
+      { path: 'drizzle.config.ts', content: getDrizzleConfigTemplate(db) },
+      { path: `${prefix}server/db.ts`, content: getDbTemplate(db) },
+      { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate() },
+      { path: `${prefix}lib/trpc.ts`, content: getTrpcClientTemplate() },
+      { path: `${prefix}app/providers.tsx`, content: getProvidersTemplate() },
+      { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate() },
+    )
+
+    // Example entity for full mode
+    if (config.includeExamples) {
+      files.push({ path: 'archetype/entities/task.ts', content: getTaskEntityTemplate() })
+    }
   }
 
   return files
 }
 
 // package.json scripts to add
-export function getPackageJsonScripts(): Record<string, string> {
-  return {
+export function getPackageJsonScripts(config: InitConfig): Record<string, string> {
+  const scripts: Record<string, string> = {
     'archetype:generate': 'archetype generate',
     'archetype:view': 'archetype view',
-    'db:push': 'drizzle-kit push',
-    'db:studio': 'drizzle-kit studio',
   }
+
+  // Only add database scripts for full mode
+  if (config.mode === 'full') {
+    scripts['db:push'] = 'drizzle-kit push'
+    scripts['db:studio'] = 'drizzle-kit studio'
+  }
+
+  return scripts
 }
