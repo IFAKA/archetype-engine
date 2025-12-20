@@ -1,3 +1,5 @@
+<img width="1280" height="640" alt="image" src="https://github.com/user-attachments/assets/eb752f28-ae21-49e6-b0ff-8adc1f4c5cd5" />
+
 # Archetype Engine
 
 A declarative data engine with a fluent TypeScript API that generates type-safe CRUD infrastructure from entity definitions.
