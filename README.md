@@ -105,7 +105,8 @@ export const Task = defineEntity('Task', {
   behaviors: {
     timestamps: true,    // adds createdAt, updatedAt
     softDelete: true,    // adds deletedAt instead of hard delete
-  }
+  },
+  protected: 'write',    // list/get public, mutations require auth
 })
 ```
 
@@ -189,6 +190,102 @@ npx archetype view             # View ERD in browser
 database: { type: 'sqlite', file: './sqlite.db' }
 database: { type: 'postgres', url: process.env.DATABASE_URL }
 database: { type: 'mysql', url: process.env.DATABASE_URL }
+```
+
+## Authentication
+
+Archetype generates next-auth v5 (Auth.js) configuration with Drizzle adapter.
+
+### Setup
+
+```bash
+npx archetype init  # Select "Yes" for authentication, choose providers
+```
+
+Or configure manually:
+
+```typescript
+// archetype.config.ts
+export default defineConfig({
+  entities: [User, Post],
+  database: { type: 'sqlite', file: './sqlite.db' },
+  auth: {
+    enabled: true,
+    providers: ['credentials', 'google', 'github'],
+  },
+})
+```
+
+### Generated Files
+
+```
+src/server/auth.ts              # NextAuth config with providers
+src/app/api/auth/[...nextauth]/ # Auth route handler
+generated/db/auth-schema.ts     # Auth tables (users, accounts, sessions)
+.env.example                    # Required secrets
+```
+
+### Providers
+
+| Provider | Requires |
+|----------|----------|
+| `credentials` | None (email/password) |
+| `google` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| `github` | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` |
+| `discord` | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` |
+
+## Entity Protection
+
+Control which CRUD operations require authentication per entity.
+
+### Shorthand Options
+
+```typescript
+protected: 'write'   // list/get public, create/update/remove require auth (MOST COMMON)
+protected: 'all'     // All operations require auth
+protected: true      // Same as 'all'
+protected: false     // All public (default)
+```
+
+### Granular Control
+
+```typescript
+protected: {
+  list: false,     // Public
+  get: false,      // Public
+  create: true,    // Requires auth
+  update: true,    // Requires auth
+  remove: true,    // Requires auth
+}
+```
+
+### Example
+
+```typescript
+// Public catalog, protected checkout
+export const Product = defineEntity('Product', {
+  fields: { name: text().required(), price: number().required() },
+  protected: 'write',  // Anyone can browse, auth required to modify
+})
+
+// All operations require auth
+export const Order = defineEntity('Order', {
+  fields: { total: number().required() },
+  protected: 'all',
+})
+```
+
+Generated routers use the appropriate procedure:
+
+```typescript
+// generated/trpc/routers/product.ts
+export const productRouter = router({
+  list: publicProcedure.query(...),       // Public
+  get: publicProcedure.input(...).query(...),
+  create: protectedProcedure.input(...).mutation(...),  // Requires auth
+  update: protectedProcedure.input(...).mutation(...),
+  remove: protectedProcedure.input(...).mutation(...),
+})
 ```
 
 ## Headless Mode

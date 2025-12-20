@@ -1,7 +1,7 @@
 // TUI prompts for archetype init
 
 import * as p from '@clack/prompts'
-import type { DatabaseType, ModeType, InitConfig } from './dependencies'
+import type { DatabaseType, ModeType, InitConfig, AuthProvider } from './dependencies'
 import { listTemplates } from '../template/registry'
 
 export async function runPrompts(): Promise<InitConfig | null> {
@@ -90,6 +90,29 @@ export async function runPrompts(): Promise<InitConfig | null> {
     return null
   }
 
+  let authProviders: AuthProvider[] | undefined
+
+  if (auth) {
+    const providers = await p.multiselect({
+      message: 'Select authentication providers:',
+      options: [
+        { value: 'credentials', label: 'Credentials', hint: 'Email/password login' },
+        { value: 'google', label: 'Google', hint: 'OAuth with Google' },
+        { value: 'github', label: 'GitHub', hint: 'OAuth with GitHub' },
+        { value: 'discord', label: 'Discord', hint: 'OAuth with Discord' },
+      ],
+      required: true,
+      initialValues: ['credentials'],
+    })
+
+    if (p.isCancel(providers)) {
+      p.cancel('Setup cancelled.')
+      return null
+    }
+
+    authProviders = providers as AuthProvider[]
+  }
+
   const wantI18n = await p.confirm({
     message: 'Do you want internationalization (i18n) support?',
     initialValue: false,
@@ -145,6 +168,7 @@ export async function runPrompts(): Promise<InitConfig | null> {
     database,
     externalApiUrl,
     auth: auth as boolean,
+    authProviders,
     i18n,
     includeExamples: includeExamples as boolean,
   }
@@ -165,8 +189,12 @@ export function displayConfigSummary(config: InitConfig): void {
     lines.push(`API URL: ${config.externalApiUrl}`)
   }
 
+  const authDisplay = config.auth
+    ? `Yes (${config.authProviders?.join(', ') || 'credentials'})`
+    : 'No'
+
   lines.push(
-    `Authentication: ${config.auth ? 'Yes (next-auth)' : 'No'}`,
+    `Authentication: ${authDisplay}`,
     `Internationalization: ${config.i18n ? config.i18n.join(', ') : 'No'}`,
     `Example entities: ${config.includeExamples ? 'Yes' : 'No'}`,
   )
@@ -176,6 +204,10 @@ export function displayConfigSummary(config: InitConfig): void {
 
 // Display success message and next steps
 export function displaySuccess(config: InitConfig): void {
+  const authNote = config.auth
+    ? `\n\nAuth setup:\n  - Copy .env.example to .env.local\n  - Add your OAuth credentials (if using Google/GitHub/Discord)`
+    : ''
+
   if (config.mode === 'headless') {
     p.outro(`Archetype initialized in headless mode!
 
@@ -183,14 +215,14 @@ Next steps:
   npx archetype generate    # Generate code from entities
   npm run dev               # Start development server
 
-Note: No database setup needed - entities will use external APIs.`)
+Note: No database setup needed - entities will use external APIs.${authNote}`)
   } else {
     p.outro(`Archetype initialized!
 
 Next steps:
   npx archetype generate    # Generate code from entities
   npx drizzle-kit push      # Create database tables
-  npm run dev               # Start development server`)
+  npm run dev               # Start development server${authNote}`)
   }
 }
 

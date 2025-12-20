@@ -1,11 +1,19 @@
 // File templates for archetype init
 
-import type { InitConfig, DatabaseType } from './dependencies'
+import type { InitConfig, DatabaseType, AuthProvider } from './dependencies'
 
 // archetype.config.ts
 export function getConfigTemplate(config: InitConfig): string {
   // Headless mode config
   if (config.mode === 'headless') {
+    const authConfig = config.auth && config.authProviders
+      ? `
+  auth: {
+    enabled: true,
+    providers: ${JSON.stringify(config.authProviders)},
+  },`
+      : ''
+
     const i18nConfig = config.i18n
       ? `
   i18n: {
@@ -27,7 +35,7 @@ export default defineConfig({
   template: '${config.template}',
   mode: 'headless',
   source: external('${sourceUrl}'),
-  entities: ${entities},${i18nConfig}
+  entities: ${entities},${authConfig}${i18nConfig}
 })
 `
   }
@@ -48,9 +56,16 @@ export default defineConfig({
     url: process.env.DATABASE_URL!,
   }`
 
+  const authConfig = config.auth && config.authProviders
+    ? `
+  auth: {
+    enabled: true,
+    providers: ${JSON.stringify(config.authProviders)},
+  },`
+    : ''
+
   const i18nConfig = config.i18n
     ? `
-
   i18n: {
     languages: ${JSON.stringify(config.i18n)},
     defaultLanguage: '${config.i18n[0]}',
@@ -68,7 +83,7 @@ ${entityImport}
 export default defineConfig({
   template: '${config.template}',
   entities: ${entities},
-  database: ${dbConfig},${i18nConfig}
+  database: ${dbConfig},${authConfig}${i18nConfig}
 })
 `
 }
@@ -140,7 +155,44 @@ export const db = drizzle(connection, { schema, mode: 'default' })
 }
 
 // src/server/trpc.ts
-export function getTrpcServerTemplate(): string {
+export function getTrpcServerTemplate(config: InitConfig): string {
+  if (config.auth) {
+    return `import { initTRPC, TRPCError } from '@trpc/server'
+import { auth } from './auth'
+
+interface Context {
+  session: Awaited<ReturnType<typeof auth>> | null
+}
+
+export async function createContext(): Promise<Context> {
+  const session = await auth()
+  return { session }
+}
+
+const t = initTRPC.context<Context>().create()
+
+export const router = t.router
+export const publicProcedure = t.procedure
+
+/**
+ * Protected procedure - requires authentication
+ * Use for entity operations that need auth
+ */
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in' })
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      session: ctx.session,
+      user: ctx.session.user,
+    },
+  })
+})
+`
+  }
+
   return `import { initTRPC } from '@trpc/server'
 
 const t = initTRPC.create()
@@ -188,7 +240,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 
 // src/app/api/trpc/[trpc]/route.ts
-export function getApiRouteTemplate(): string {
+export function getApiRouteTemplate(config: InitConfig): string {
+  if (config.auth) {
+    return `import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
+import { appRouter } from '@/generated/trpc/routers'
+import { createContext } from '@/server/trpc'
+
+const handler = (req: Request) =>
+  fetchRequestHandler({
+    endpoint: '/api/trpc',
+    req,
+    router: appRouter,
+    createContext,
+  })
+
+export { handler as GET, handler as POST }
+`
+  }
+
   return `import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
 import { appRouter } from '@/generated/trpc/routers'
 
@@ -221,12 +290,133 @@ export function getDrizzleConfigTemplate(database: DatabaseType): string {
   return `import { defineConfig } from 'drizzle-kit'
 
 export default defineConfig({
-  schema: './generated/db/schema.ts',
+  schema: ['./generated/db/schema.ts', './generated/db/auth-schema.ts'],
   out: './drizzle',
   dialect: '${dialectMap[database]}',
   dbCredentials: { ${credentialsMap[database]} },
 })
 `
+}
+
+// src/server/auth.ts - NextAuth configuration
+export function getAuthTemplate(config: InitConfig): string {
+  const providers = config.authProviders || ['credentials']
+  const imports: string[] = ['import NextAuth from "next-auth"']
+  const providerSetups: string[] = []
+
+  if (providers.includes('credentials')) {
+    imports.push('import Credentials from "next-auth/providers/credentials"')
+    providerSetups.push(`    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        // TODO: Implement your own authentication logic
+        // This is a placeholder - replace with actual user lookup
+        if (!credentials?.email || !credentials?.password) return null
+
+        // Example: look up user in database
+        // const user = await db.query.users.findFirst({
+        //   where: eq(users.email, credentials.email)
+        // })
+        // if (!user || !await bcrypt.compare(credentials.password, user.password)) {
+        //   return null
+        // }
+        // return { id: user.id, email: user.email, name: user.name }
+
+        return null
+      },
+    })`)
+  }
+
+  if (providers.includes('google')) {
+    imports.push('import Google from "next-auth/providers/google"')
+    providerSetups.push('    Google')
+  }
+
+  if (providers.includes('github')) {
+    imports.push('import GitHub from "next-auth/providers/github"')
+    providerSetups.push('    GitHub')
+  }
+
+  if (providers.includes('discord')) {
+    imports.push('import Discord from "next-auth/providers/discord"')
+    providerSetups.push('    Discord')
+  }
+
+  return `${imports.join('\n')}
+import { DrizzleAdapter } from "@auth/drizzle-adapter"
+import { db } from "./db"
+import * as authSchema from "@/generated/db/auth-schema"
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: DrizzleAdapter(db, {
+    usersTable: authSchema.users,
+    accountsTable: authSchema.accounts,
+    sessionsTable: authSchema.sessions,
+    verificationTokensTable: authSchema.verificationTokens,
+  }),
+  session: { strategy: "jwt" },
+  providers: [
+${providerSetups.join(',\n')},
+  ],
+  callbacks: {
+    session: ({ session, token }) => ({
+      ...session,
+      user: {
+        ...session.user,
+        id: token.sub,
+      },
+    }),
+  },
+})
+`
+}
+
+// src/app/api/auth/[...nextauth]/route.ts
+export function getAuthRouteTemplate(): string {
+  return `import { handlers } from "@/server/auth"
+
+export const { GET, POST } = handlers
+`
+}
+
+// .env.example
+export function getEnvExampleTemplate(config: InitConfig): string {
+  const lines: string[] = ['# Authentication']
+  lines.push('AUTH_SECRET=your-auth-secret-here  # Generate with: npx auth secret')
+
+  const providers = config.authProviders || []
+
+  if (providers.includes('google')) {
+    lines.push('')
+    lines.push('# Google OAuth')
+    lines.push('AUTH_GOOGLE_ID=your-google-client-id')
+    lines.push('AUTH_GOOGLE_SECRET=your-google-client-secret')
+  }
+
+  if (providers.includes('github')) {
+    lines.push('')
+    lines.push('# GitHub OAuth')
+    lines.push('AUTH_GITHUB_ID=your-github-client-id')
+    lines.push('AUTH_GITHUB_SECRET=your-github-client-secret')
+  }
+
+  if (providers.includes('discord')) {
+    lines.push('')
+    lines.push('# Discord OAuth')
+    lines.push('AUTH_DISCORD_ID=your-discord-client-id')
+    lines.push('AUTH_DISCORD_SECRET=your-discord-client-secret')
+  }
+
+  if (config.database && config.database !== 'sqlite') {
+    lines.push('')
+    lines.push('# Database')
+    lines.push('DATABASE_URL=your-database-url')
+  }
+
+  return lines.join('\n') + '\n'
 }
 
 // All template files to create
@@ -250,15 +440,24 @@ export function getAllTemplateFiles(config: InitConfig, structure: ProjectStruct
   if (config.mode === 'headless') {
     // Headless mode: tRPC but no database
     files.push(
-      { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate() },
+      { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate(config) },
       { path: `${prefix}lib/trpc.ts`, content: getTrpcClientTemplate() },
       { path: `${prefix}app/providers.tsx`, content: getProvidersTemplate() },
-      { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate() },
+      { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate(config) },
     )
 
     // Example entity for headless mode
     if (config.includeExamples) {
       files.push({ path: 'archetype/entities/product.ts', content: getProductEntityTemplate() })
+    }
+
+    // Auth files for headless mode (if auth enabled)
+    if (config.auth) {
+      files.push(
+        { path: `${prefix}server/auth.ts`, content: getAuthTemplate(config) },
+        { path: `${prefix}app/api/auth/[...nextauth]/route.ts`, content: getAuthRouteTemplate() },
+        { path: '.env.example', content: getEnvExampleTemplate(config) },
+      )
     }
   } else {
     // Full mode: database + tRPC
@@ -267,15 +466,24 @@ export function getAllTemplateFiles(config: InitConfig, structure: ProjectStruct
     files.push(
       { path: 'drizzle.config.ts', content: getDrizzleConfigTemplate(db) },
       { path: `${prefix}server/db.ts`, content: getDbTemplate(db) },
-      { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate() },
+      { path: `${prefix}server/trpc.ts`, content: getTrpcServerTemplate(config) },
       { path: `${prefix}lib/trpc.ts`, content: getTrpcClientTemplate() },
       { path: `${prefix}app/providers.tsx`, content: getProvidersTemplate() },
-      { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate() },
+      { path: `${prefix}app/api/trpc/[trpc]/route.ts`, content: getApiRouteTemplate(config) },
     )
 
     // Example entity for full mode
     if (config.includeExamples) {
       files.push({ path: 'archetype/entities/task.ts', content: getTaskEntityTemplate() })
+    }
+
+    // Auth files for full mode (if auth enabled)
+    if (config.auth) {
+      files.push(
+        { path: `${prefix}server/auth.ts`, content: getAuthTemplate(config) },
+        { path: `${prefix}app/api/auth/[...nextauth]/route.ts`, content: getAuthRouteTemplate() },
+        { path: '.env.example', content: getEnvExampleTemplate(config) },
+      )
     }
   }
 

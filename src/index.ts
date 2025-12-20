@@ -18,7 +18,15 @@ export type { RelationBuilder, RelationConfig, RelationType } from './relations'
 
 // Entity definition
 export { defineEntity } from './entity'
-export type { EntityDefinition, EntityBehaviors, EntityIR } from './entity'
+export type {
+  EntityDefinition,
+  EntityBehaviors,
+  EntityIR,
+  ProtectedShorthand,
+  ProtectedConfig,
+  ProtectedOption,
+  ProtectedIR,
+} from './entity'
 
 // Manifest definition
 export { defineManifest, defineConfig, normalizeMode } from './manifest'

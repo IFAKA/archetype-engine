@@ -3,7 +3,7 @@
 import type { Generator, GeneratedFile } from '../../../template/types'
 import type { GeneratorContext } from '../../../template/context'
 import type { ManifestIR } from '../../../manifest'
-import type { EntityIR } from '../../../entity'
+import type { EntityIR, ProtectedIR } from '../../../entity'
 import { toSnakeCase, pluralize } from '../../../core/utils'
 
 function getTableName(entityName: string): string {
@@ -18,24 +18,61 @@ function hasExternalSource(entity: EntityIR, manifest: ManifestIR): boolean {
   return source?.type === 'external'
 }
 
+type CrudMethod = 'list' | 'get' | 'create' | 'update' | 'remove'
+
+/**
+ * Get the procedure type for a specific CRUD method
+ */
+function getProcedureType(
+  method: CrudMethod,
+  prot: ProtectedIR,
+  authEnabled: boolean
+): 'publicProcedure' | 'protectedProcedure' {
+  if (!authEnabled) return 'publicProcedure'
+  return prot[method] ? 'protectedProcedure' : 'publicProcedure'
+}
+
+/**
+ * Get the procedure imports needed for an entity
+ */
+function getProcedureImports(prot: ProtectedIR, authEnabled: boolean): string {
+  if (!authEnabled) return 'publicProcedure'
+
+  const needsPublic = Object.values(prot).some(v => !v)
+  const needsProtected = Object.values(prot).some(v => v)
+
+  if (needsPublic && needsProtected) {
+    return 'publicProcedure, protectedProcedure'
+  } else if (needsProtected) {
+    return 'protectedProcedure'
+  }
+  return 'publicProcedure'
+}
+
 /**
  * Generate router for entity with external API source
  */
 function generateExternalEntityRouter(entity: EntityIR, manifest: ManifestIR): string {
   const name = entity.name
   const lowerName = name.toLowerCase()
+  const authEnabled = manifest.auth.enabled
+  const prot = entity.protected
+
+  // Get procedure type for each method
+  const proc = (method: CrudMethod) => getProcedureType(method, prot, authEnabled)
+  const procedureImports = getProcedureImports(prot, authEnabled)
 
   return `// Auto-generated tRPC router for ${name} (external API)
 // Do not edit manually - regenerate with: npx archetype generate
 
 import { z } from 'zod'
-import { router, publicProcedure } from '@/server/trpc'
+import { router, ${procedureImports} } from '@/server/trpc'
 import { ${lowerName}Service } from '@/generated/services/${lowerName}Service'
 import { ${lowerName}CreateSchema, ${lowerName}UpdateSchema } from '@/generated/schemas/${lowerName}'
 
 export const ${lowerName}Router = router({
   // List all ${name}s
-  list: publicProcedure
+  list: ${proc('list')}
     .input(z.object({
       page: z.number().optional(),
       limit: z.number().optional(),
@@ -45,21 +82,21 @@ export const ${lowerName}Router = router({
     }),
 
   // Get single ${name} by ID
-  get: publicProcedure
+  get: ${proc('get')}
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       return ${lowerName}Service.get(input.id)
     }),
 
   // Create new ${name}
-  create: publicProcedure
+  create: ${proc('create')}
     .input(${lowerName}CreateSchema)
     .mutation(async ({ input }) => {
       return ${lowerName}Service.create(input)
     }),
 
   // Update ${name}
-  update: publicProcedure
+  update: ${proc('update')}
     .input(z.object({
       id: z.string(),
       data: ${lowerName}UpdateSchema,
@@ -69,7 +106,7 @@ export const ${lowerName}Router = router({
     }),
 
   // Remove ${name}
-  remove: publicProcedure
+  remove: ${proc('remove')}
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       return ${lowerName}Service.delete(input.id)
@@ -88,9 +125,12 @@ function generateDatabaseEntityRouter(entity: EntityIR, manifest: ManifestIR): s
 
   const useTenancy = manifest.tenancy.enabled
   const useSoftDelete = entity.behaviors.softDelete
+  const authEnabled = manifest.auth.enabled
+  const prot = entity.protected
 
-  // Determine procedure type (use publicProcedure for simplicity)
-  const procedureType = 'publicProcedure'
+  // Get procedure type for each method
+  const proc = (method: CrudMethod) => getProcedureType(method, prot, authEnabled)
+  const procedureImports = getProcedureImports(prot, authEnabled)
 
   // Schema import
   const schemaImport = `import { ${lowerName}CreateSchema, ${lowerName}UpdateSchema } from '@/generated/schemas/${lowerName}'`
@@ -123,7 +163,7 @@ function generateDatabaseEntityRouter(entity: EntityIR, manifest: ManifestIR): s
 // Do not edit manually - regenerate with: npx archetype generate
 
 import { z } from 'zod'
-import { router, publicProcedure } from '@/server/trpc'
+import { router, ${procedureImports} } from '@/server/trpc'
 import { db } from '@/server/db'
 import { ${tableName} } from '@/generated/db/schema'
 ${schemaImport}
@@ -131,12 +171,12 @@ ${drizzleImports}
 
 export const ${lowerName}Router = router({
   // List all ${name}s
-  list: ${procedureType}.query(async ({ ctx }) => {
+  list: ${proc('list')}.query(async ({ ctx }) => {
     return db.select().from(${tableName})${listWhereClause}
   }),
 
   // Get single ${name} by ID
-  get: ${procedureType}
+  get: ${proc('get')}
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await db.select().from(${tableName})
@@ -146,7 +186,7 @@ export const ${lowerName}Router = router({
     }),
 
   // Create new ${name}
-  create: ${procedureType}
+  create: ${proc('create')}
     .input(${lowerName}CreateSchema)
     .mutation(async ({ ctx, input }) => {
       const now = new Date().toISOString()
@@ -160,7 +200,7 @@ export const ${lowerName}Router = router({
     }),
 
   // Update ${name}
-  update: ${procedureType}
+  update: ${proc('update')}
     .input(z.object({
       id: z.string(),
       data: ${lowerName}UpdateSchema,
@@ -177,7 +217,7 @@ export const ${lowerName}Router = router({
     }),
 
   // Remove ${name}
-  remove: ${procedureType}
+  remove: ${proc('remove')}
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {${useSoftDelete ? `
       // Soft delete

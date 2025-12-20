@@ -118,4 +118,119 @@ describe('defineEntity()', () => {
     expect(Category.relations.parent.entity).toBe('Category')
     expect(Category.relations.children.entity).toBe('Category')
   })
+
+  describe('protected option', () => {
+    it('defaults to all public when not specified', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+      })
+
+      expect(Task.protected).toEqual({
+        list: false,
+        get: false,
+        create: false,
+        update: false,
+        remove: false,
+      })
+    })
+
+    it('normalizes false to all public', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+        protected: false,
+      })
+
+      expect(Task.protected).toEqual({
+        list: false,
+        get: false,
+        create: false,
+        update: false,
+        remove: false,
+      })
+    })
+
+    it('normalizes true to all protected', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+        protected: true,
+      })
+
+      expect(Task.protected).toEqual({
+        list: true,
+        get: true,
+        create: true,
+        update: true,
+        remove: true,
+      })
+    })
+
+    it('normalizes "all" to all protected', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+        protected: 'all',
+      })
+
+      expect(Task.protected).toEqual({
+        list: true,
+        get: true,
+        create: true,
+        update: true,
+        remove: true,
+      })
+    })
+
+    it('normalizes "write" to read public, write protected', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+        protected: 'write',
+      })
+
+      expect(Task.protected).toEqual({
+        list: false,
+        get: false,
+        create: true,
+        update: true,
+        remove: true,
+      })
+    })
+
+    it('handles granular config', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+        protected: {
+          list: false,
+          get: true,
+          create: true,
+          update: false,
+          remove: true,
+        },
+      })
+
+      expect(Task.protected).toEqual({
+        list: false,
+        get: true,
+        create: true,
+        update: false,
+        remove: true,
+      })
+    })
+
+    it('fills missing granular config with false', () => {
+      const Task = defineEntity('Task', {
+        fields: { title: text().required() },
+        protected: {
+          create: true,
+          remove: true,
+        },
+      })
+
+      expect(Task.protected).toEqual({
+        list: false,
+        get: false,
+        create: true,
+        update: false,
+        remove: true,
+      })
+    })
+  })
 })

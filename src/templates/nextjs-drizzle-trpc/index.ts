@@ -3,6 +3,7 @@
 
 import type { Template } from '../../template/types'
 import { schemaGenerator } from './generators/schema'
+import { authGenerator } from './generators/auth'
 import { validationGenerator } from './generators/validation'
 import { serviceGenerator } from './generators/service'
 import { apiGenerator } from './generators/api'
@@ -33,9 +34,10 @@ export const template: Template = {
   },
   generators: [
     schemaGenerator,      // Skipped in headless mode
+    authGenerator,        // Only if auth enabled
     validationGenerator,  // Always runs
     serviceGenerator,     // Only for external entities
-    apiGenerator,         // Adapts to source type
+    apiGenerator,         // Adapts to source type + auth
     hooksGenerator,       // Always runs
     i18nGenerator,        // Only if i18n enabled
   ],

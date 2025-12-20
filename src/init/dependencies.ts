@@ -2,6 +2,7 @@
 
 export type DatabaseType = 'sqlite' | 'postgres' | 'mysql'
 export type ModeType = 'full' | 'headless'
+export type AuthProvider = 'credentials' | 'google' | 'github' | 'discord'
 
 export interface InitConfig {
   template: string  // Template ID from registry
@@ -9,6 +10,7 @@ export interface InitConfig {
   database?: DatabaseType  // Optional - only for full mode
   externalApiUrl?: string  // Optional - for headless mode
   auth: boolean
+  authProviders?: AuthProvider[]  // Selected auth providers
   i18n: string[] | null
   includeExamples: boolean
 }
@@ -46,6 +48,12 @@ export const databaseDependencies: Record<DatabaseType, { deps: string[]; devDep
   },
 }
 
+// Auth dependencies (next-auth v5)
+export const authDependencies = {
+  deps: ['next-auth@beta', '@auth/drizzle-adapter'],
+  devDeps: [],
+}
+
 // Headless mode dependencies (no DB, external APIs)
 export const headlessDependencies = [
   '@trpc/server',
@@ -61,10 +69,16 @@ export const headlessDependencies = [
 export function getDependencies(config: InitConfig): { deps: string[]; devDeps: string[] } {
   // Headless mode - no database deps
   if (config.mode === 'headless') {
-    return {
-      deps: [...headlessDependencies],
-      devDeps: [],
+    const deps = [...headlessDependencies]
+    const devDeps: string[] = []
+
+    // Add auth deps if enabled
+    if (config.auth) {
+      deps.push(...authDependencies.deps)
+      devDeps.push(...authDependencies.devDeps)
     }
+
+    return { deps, devDeps }
   }
 
   // Full mode - include database deps
@@ -76,6 +90,12 @@ export function getDependencies(config: InitConfig): { deps: string[]; devDeps: 
     const dbDeps = databaseDependencies[config.database]
     deps.push(...dbDeps.deps)
     devDeps.push(...dbDeps.devDeps)
+  }
+
+  // Add auth deps if enabled
+  if (config.auth) {
+    deps.push(...authDependencies.deps)
+    devDeps.push(...authDependencies.devDeps)
   }
 
   return { deps, devDeps }

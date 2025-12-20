@@ -104,6 +104,10 @@ import { Post } from './archetype/entities/post'
 export default defineConfig({
   entities: [User, Post],
   database: { type: 'sqlite', file: './sqlite.db' },
+  auth: {
+    enabled: true,
+    providers: ['credentials', 'google', 'github'],
+  },
 })
 ```
 
@@ -125,7 +129,8 @@ export const User = defineEntity('User', {
   behaviors: {
     timestamps: true,
     softDelete: true,
-  }
+  },
+  protected: 'write',  // list/get public, create/update/remove require auth
 })
 ```
 
@@ -133,7 +138,9 @@ export const User = defineEntity('User', {
 
 ```
 generated/
-├── db/schema.ts           # Drizzle ORM schema
+├── db/
+│   ├── schema.ts          # Drizzle ORM schema
+│   └── auth-schema.ts     # Auth.js tables (if auth enabled)
 ├── schemas/{entity}.ts    # Zod validation schemas
 ├── trpc/routers/          # tRPC routers with CRUD
 │   ├── {entity}.ts
@@ -162,6 +169,67 @@ All fields support: `.required()`, `.optional()`, `.unique()`, `.default()`, `.l
 - `timestamps: true` - Adds `createdAt`, `updatedAt` fields
 - `softDelete: true` - Adds `deletedAt` field instead of hard delete
 - `audit: true` - Logs all changes (planned)
+
+## Authentication
+
+Integrated next-auth v5 (Auth.js) support with Drizzle adapter.
+
+### Config
+
+```typescript
+auth: {
+  enabled: true,
+  providers: ['credentials', 'google', 'github', 'discord'],
+  sessionStrategy: 'jwt',  // or 'database'
+}
+```
+
+### Init Flow
+
+When running `npx archetype init`, if you enable auth you'll be prompted to select providers.
+
+### Generated Files
+
+- `src/server/auth.ts` - NextAuth configuration with selected providers
+- `src/app/api/auth/[...nextauth]/route.ts` - Auth route handler
+- `generated/db/auth-schema.ts` - Auth tables (users, accounts, sessions, verificationTokens)
+- `.env.example` - Required environment variables
+
+## Entity Protection
+
+Control which CRUD operations require authentication per entity.
+
+### Shorthand Options
+
+```typescript
+protected: 'write'   // list/get public, create/update/remove protected (MOST COMMON)
+protected: 'all'     // All operations require auth
+protected: true      // Alias for 'all'
+protected: false     // All operations public (default)
+```
+
+### Granular Config
+
+```typescript
+protected: {
+  list: false,
+  get: false,
+  create: true,
+  update: true,
+  remove: true,
+}
+```
+
+### Generated Router
+
+```typescript
+// With protected: 'write', generates:
+list: publicProcedure.query(...)      // public
+get: publicProcedure.query(...)       // public
+create: protectedProcedure.mutation(...)  // requires auth
+update: protectedProcedure.mutation(...)  // requires auth
+remove: protectedProcedure.mutation(...)  // requires auth
+```
 
 ## Testing
 

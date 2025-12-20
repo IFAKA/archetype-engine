@@ -8,6 +8,44 @@ import { RelationBuilder, RelationConfig } from './relations'
 import { ExternalSourceConfig } from './source'
 
 /**
+ * Shorthand protection options for common patterns
+ */
+export type ProtectedShorthand = 'write' | 'all' | boolean
+
+/**
+ * Granular protection config per CRUD operation
+ */
+export interface ProtectedConfig {
+  list?: boolean
+  get?: boolean
+  create?: boolean
+  update?: boolean
+  remove?: boolean
+}
+
+/**
+ * Protection option - shorthand or granular
+ * @example
+ * protected: 'write'  // list/get public, mutations protected (most common)
+ * protected: 'all'    // everything requires auth
+ * protected: true     // alias for 'all'
+ * protected: false    // everything public (default)
+ * protected: { list: false, get: false, create: true, update: true, remove: true }
+ */
+export type ProtectedOption = ProtectedShorthand | ProtectedConfig
+
+/**
+ * Normalized protection config (always granular)
+ */
+export interface ProtectedIR {
+  list: boolean
+  get: boolean
+  create: boolean
+  update: boolean
+  remove: boolean
+}
+
+/**
  * Entity definition input - what you write when defining an entity
  */
 export interface EntityDefinition {
@@ -19,6 +57,14 @@ export interface EntityDefinition {
   behaviors?: EntityBehaviors
   /** Mark as auth entity for next-auth integration */
   auth?: boolean
+  /**
+   * Protection level for CRUD operations (requires auth.enabled in config)
+   * - 'write': list/get public, create/update/remove protected (most common)
+   * - 'all' or true: all operations require auth
+   * - false: all operations public (default)
+   * - object: granular control per operation
+   */
+  protected?: ProtectedOption
   /**
    * External API source for this entity.
    * If not specified, inherits from manifest.source or uses database.
@@ -52,8 +98,26 @@ export interface EntityIR {
   behaviors: EntityBehaviors
   /** Whether this is an auth entity */
   auth: boolean
+  /** Normalized protection config for CRUD operations */
+  protected: ProtectedIR
   /** External API source (optional - inherits from manifest if not specified) */
   source?: ExternalSourceConfig
+}
+
+/**
+ * Normalize protection option to granular config
+ */
+function normalizeProtected(option?: ProtectedOption): ProtectedIR {
+  const allPublic: ProtectedIR = { list: false, get: false, create: false, update: false, remove: false }
+  const allProtected: ProtectedIR = { list: true, get: true, create: true, update: true, remove: true }
+  const writeProtected: ProtectedIR = { list: false, get: false, create: true, update: true, remove: true }
+
+  if (option === undefined || option === false) return allPublic
+  if (option === true || option === 'all') return allProtected
+  if (option === 'write') return writeProtected
+
+  // Granular config - merge with allPublic defaults
+  return { ...allPublic, ...option }
 }
 
 // Compile entity definition to IR
@@ -83,6 +147,7 @@ function compileEntity(name: string, definition: EntityDefinition): EntityIR {
       ...definition.behaviors,
     },
     auth: definition.auth || false,
+    protected: normalizeProtected(definition.protected),
     source: definition.source,
   }
 }
