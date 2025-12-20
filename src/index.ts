@@ -53,3 +53,32 @@ export type {
 
 // Legacy type exports (for backwards compatibility)
 export { EntityConfig, PropertyConfig, Manifest, isPropertyConfig } from './types'
+
+// Template system
+export { getTemplate, listTemplates, hasTemplate, runTemplate, createContext } from './template'
+export type { Template, Generator, GeneratedFile, TemplateConfig } from './template/types'
+
+// JSON input for AI agents
+export { parseManifestJSON, parseEntityJSON, parseFieldJSON, loadManifestFromJSONFile } from './json/parser'
+export type {
+  ManifestJSON,
+  EntityJSON,
+  FieldJSON,
+  RelationJSON,
+  BehaviorsJSON,
+  ProtectedJSON,
+  ProtectedConfigJSON,
+  ExternalSourceJSON,
+  ExternalAuthJSON,
+  EndpointOverrideJSON,
+  DatabaseJSON,
+  AuthJSON,
+  I18nJSON,
+  ObservabilityJSON,
+  TenancyJSON,
+  DefaultsJSON,
+} from './json/types'
+
+// Validation for AI agents
+export { validateManifest, ValidationCodes } from './validation'
+export type { ValidationError, ValidationResult } from './validation'

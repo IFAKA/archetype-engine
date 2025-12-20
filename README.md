@@ -181,8 +181,39 @@ import { hasOne, hasMany, belongsToMany } from 'archetype-engine'
 npx archetype init             # Interactive setup
 npx archetype init --yes       # Defaults (SQLite)
 npx archetype generate         # Generate from entities
+npx archetype validate         # Validate without generating
 npx archetype view             # View ERD in browser
 ```
+
+## AI Integration
+
+Archetype can be used by AI agents to generate apps from natural language. Instead of writing TypeScript, AI generates a simple JSON manifest.
+
+```bash
+# AI generates JSON
+echo '{
+  "entities": [
+    { "name": "User", "fields": { "email": { "type": "text", "email": true } } },
+    { "name": "Post", "fields": { "title": { "type": "text" } },
+      "relations": { "author": { "type": "hasOne", "entity": "User" } } }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" }
+}' > manifest.json
+
+# Validate
+npx archetype validate manifest.json --json
+# → { "valid": true, "errors": [] }
+
+# Generate
+npx archetype generate manifest.json --json
+# → { "success": true, "files": [...] }
+```
+
+**Flags for AI:**
+- `--json` - Output as structured JSON
+- `--stdin` - Read JSON from stdin (for piping)
+
+See the full [AI Integration Guide](docs/AI_INTEGRATION.md) for JSON schema reference, error codes, and example system prompts.
 
 ## Database Options
 
