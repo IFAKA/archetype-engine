@@ -82,3 +82,8 @@ export type {
 // Validation for AI agents
 export { validateManifest, ValidationCodes } from './validation'
 export type { ValidationError, ValidationResult } from './validation'
+
+// AI tools (for modern AI frameworks)
+// Import from 'archetype-engine/ai' for full AI toolkit
+export { createManifestBuilder, aiTools } from './ai'
+export type { ManifestBuilder, ToolResult } from './ai/types'

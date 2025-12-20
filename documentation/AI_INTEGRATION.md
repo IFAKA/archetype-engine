@@ -2,6 +2,36 @@
 
 Use archetype-engine in AI workflows to let users describe apps in natural language and have AI generate the code.
 
+## AI Toolkit (New!)
+
+archetype-engine includes ready-to-use tools for modern AI frameworks:
+
+```typescript
+import { createManifestBuilder, aiTools } from 'archetype-engine/ai'
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
+
+// Create a builder to track state across tool calls
+const builder = createManifestBuilder()
+
+// Use with Vercel AI SDK
+const result = await generateText({
+  model: openai('gpt-4o'),
+  tools: aiTools.vercel(builder),
+  system: 'You are an app builder. Use the tools to build what the user describes.',
+  prompt: 'Create a blog with users and posts',
+  maxSteps: 10
+})
+
+// Generate the app
+const { files, success } = await builder.generate()
+```
+
+Available adapters:
+- `aiTools.vercel(builder)` - Vercel AI SDK
+- `aiTools.openai()` - OpenAI function calling
+- `aiTools.anthropic()` - Anthropic tool use
+
 ## Why Use Archetype with AI?
 
 | Without Archetype | With Archetype |
@@ -303,102 +333,111 @@ Create a Next.js app that will be your AI Builder:
 ```bash
 npx create-next-app@latest ai-app-builder
 cd ai-app-builder
-npm install archetype-engine openai
+npm install archetype-engine ai @ai-sdk/openai
 ```
 
-#### File 1: The Generation Logic
+#### File 1: The Generation Logic (Using AI Toolkit)
+
+```typescript
+// lib/generate-app.ts
+import { createManifestBuilder, aiTools } from 'archetype-engine/ai'
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
+
+export async function generateApp(description: string) {
+  // 1. Create builder to track state across tool calls
+  const builder = createManifestBuilder()
+
+  // 2. AI uses tools to build the manifest
+  const result = await generateText({
+    model: openai('gpt-4o'),
+    tools: aiTools.vercel(builder),
+    system: SYSTEM_PROMPT,
+    prompt: description,
+    maxSteps: 15 // Allow multiple tool calls
+  })
+
+  // 3. Validate
+  const validation = builder.validate()
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors }
+  }
+
+  // 4. Generate backend with archetype-engine
+  const { files, success, errors } = await builder.generate()
+  if (!success) {
+    return { success: false, errors }
+  }
+
+  // 5. AI generates UI components using the hooks
+  const uiResult = await generateText({
+    model: openai('gpt-4o'),
+    system: UI_PROMPT,
+    prompt: `Generate UI for these entities: ${builder.entities.map(e => e.name).join(', ')}`
+  })
+
+  return {
+    success: true,
+    files,
+    entities: builder.entities.map(e => e.name),
+    ui: uiResult.text
+  }
+}
+
+const SYSTEM_PROMPT = `You are an app builder. Use the tools to build what the user describes:
+
+1. add_entity - Create entities (User, Post, Task, etc.) with fields and relations
+2. set_database - Configure database (sqlite recommended for demos)
+3. set_auth - Enable auth if the user wants login
+4. validate - Check for errors before generating
+5. generate - Create the app
+
+Ask clarifying questions if needed. Build incrementally.`
+
+const UI_PROMPT = `Generate React components that use the archetype hooks.
+For entity "Task", use: useTasks(), useTask(id), useCreateTask(), useUpdateTask(), useDeleteTask()
+Create list pages, forms, and detail views. Use Tailwind CSS.`
+```
+
+This approach uses **function calling** - the AI calls tools like `add_entity` and `set_database` incrementally, building the manifest step by step. archetype-engine validates and generates the backend.
+
+#### Alternative: Direct JSON Approach
+
+If you prefer the AI to generate JSON directly (simpler but less interactive):
 
 ```typescript
 // lib/generate-app.ts
 import { validateManifest, parseManifestJSON, getTemplate, runTemplate } from 'archetype-engine'
-import OpenAI from 'openai'
-
-const openai = new OpenAI()
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
 
 export async function generateApp(description: string) {
-  // 1. AI generates manifest from user description
-  const { manifest: manifestJSON, ui: uiFiles } = await askAI(description)
+  // 1. AI generates manifest JSON
+  const result = await generateText({
+    model: openai('gpt-4o'),
+    system: MANIFEST_PROMPT,
+    prompt: description
+  })
 
-  // 2. Validate manifest
+  const manifestJSON = JSON.parse(result.text)
+
+  // 2. Validate
   const validation = validateManifest(manifestJSON)
   if (!validation.valid) {
     return { success: false, errors: validation.errors }
   }
 
-  // 3. archetype-engine generates backend (schema, API, hooks)
+  // 3. Generate with archetype
   const manifest = parseManifestJSON(manifestJSON)
   const template = await getTemplate('nextjs-drizzle-trpc')
-  const backendFiles = await runTemplate(template!, manifest)
+  const files = await runTemplate(template!, manifest)
 
-  // 4. Combine backend (from archetype) + UI (from AI)
-  return {
-    success: true,
-    files: [...backendFiles, ...uiFiles],
-    entities: manifest.entities.map(e => e.name),
-    manifest: manifestJSON
-  }
+  return { success: true, files, entities: manifest.entities.map(e => e.name) }
 }
 
-// AI generates both: manifest for archetype AND UI components using the hooks
-async function askAI(description: string) {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: description }
-    ]
-  })
-  return JSON.parse(response.choices[0].message.content!)
-}
-
-const SYSTEM_PROMPT = `You are an AI app builder. Given a user's app description, generate:
-
-1. A "manifest" for archetype-engine (generates backend: database, API, hooks)
-2. "ui" components that USE the hooks archetype will generate
-
-Return JSON with this structure:
-{
-  "manifest": {
-    "entities": [
-      {
-        "name": "Task",
-        "fields": {
-          "title": { "type": "text" },
-          "done": { "type": "boolean", "default": false }
-        },
-        "relations": {
-          "assignee": { "type": "hasOne", "entity": "User" }
-        }
-      }
-    ],
-    "database": { "type": "sqlite", "file": "./app.db" },
-    "auth": { "enabled": true, "providers": ["credentials"] }
-  },
-  "ui": [
-    {
-      "path": "app/tasks/page.tsx",
-      "content": "'use client'\\nimport { useTasks } from '@/generated/hooks/useTask'\\n\\nexport default function TasksPage() {\\n  const { data: tasks, isLoading } = useTasks()\\n  if (isLoading) return <p>Loading...</p>\\n  return (\\n    <div className=\\"p-8\\">\\n      <h1 className=\\"text-2xl font-bold mb-4\\">Tasks</h1>\\n      <ul>\\n        {tasks?.map(t => <li key={t.id}>{t.title}</li>)}\\n      </ul>\\n    </div>\\n  )\\n}"
-    }
-  ]
-}
-
-## Manifest format (for archetype-engine)
-- entities[].name: PascalCase (User, Task, Project)
-- entities[].fields: { fieldName: { type: "text|number|boolean|date", ...validations } }
-- entities[].relations: { name: { type: "hasOne|hasMany", entity: "TargetEntity" } }
-- Field validations: email, url, min, max, unique, oneOf, integer, positive
-
-## UI components (use the hooks archetype generates)
-For each entity "Task", archetype generates these hooks:
-- useTasks() - list all
-- useTask(id) - get one
-- useCreateTask() - create mutation
-- useUpdateTask() - update mutation
-- useDeleteTask() - delete mutation
-
-Generate React components that import and use these hooks.
-Create pages for: list view, detail view, create form, edit form.
-Use Tailwind CSS for styling.`
+const MANIFEST_PROMPT = `Generate an archetype-engine manifest JSON.
+Format: { "entities": [...], "database": { "type": "sqlite", "file": "./app.db" } }
+Entity: { "name": "User", "fields": { "email": { "type": "text", "email": true } }, "relations": { "posts": { "type": "hasMany", "entity": "Post" } } }`
 ```
 
 #### File 2: API Endpoint

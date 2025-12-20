@@ -9,6 +9,11 @@
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js",
       "require": "./dist/src/index.js"
+    },
+    "./ai": {
+      "types": "./dist/src/ai/index.d.ts",
+      "import": "./dist/src/ai/index.js",
+      "require": "./dist/src/ai/index.js"
     }
   },
   "bin": {
@@ -32,7 +37,8 @@
   "dependencies": {
     "@clack/prompts": "^0.11.0",
     "puppeteer": "^24.34.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.5",
@@ -55,7 +61,13 @@
     "code-generation",
     "crud",
     "api",
-    "typescript"
+    "typescript",
+    "ai",
+    "openai",
+    "anthropic",
+    "vercel-ai-sdk",
+    "function-calling",
+    "tool-use"
   ],
   "author": "",
   "license": "MIT"
