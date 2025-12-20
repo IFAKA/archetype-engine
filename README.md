@@ -2,80 +2,87 @@
 
 # Archetype Engine
 
-A declarative data engine with a fluent TypeScript API that generates type-safe CRUD infrastructure from entity definitions.
+**Define your data model. Generate the boring parts.**
 
-**Define your data model once, generate everything:**
-- Drizzle ORM schemas
-- Zod validation schemas
-- tRPC routers with full CRUD
-- React hooks for forms and data fetching
-- ERD diagrams
+```typescript
+export const Task = defineEntity('Task', {
+  fields: {
+    title: text().required().min(1).max(200),
+    done: boolean().default(false),
+  },
+  behaviors: { timestamps: true }
+})
+```
+
+Run `npx archetype generate` → get Drizzle schema, Zod validation, tRPC router, React hooks. Done.
 
 ## Quick Start
 
-### Local Installation (Development)
-
 ```bash
-# 1. Clone and build archetype-engine
-git clone https://github.com/ifaka/archetype.git
-cd archetype
-npm install && npm run build
-npm link
-
-# 2. Create Next.js project
-cd ..
 npx create-next-app my-app && cd my-app
-
-# 3. Link archetype-engine locally
-npm link archetype-engine
-
-# 4. Initialize (creates config + infrastructure + installs deps)
+npm install archetype-engine
 npx archetype init --yes
-
-# 5. Generate code
 npx archetype generate
-
-# 6. Push DB schema + run
 npx drizzle-kit push && npm run dev
 ```
 
-That's it! You now have a working fullstack app with a Task entity.
+You now have a working fullstack app with a Task entity.
 
-## What `init` Creates
+## Why Archetype?
 
-```
-my-app/
-├── archetype.config.ts           # Config file
-├── archetype/entities/task.ts    # Example entity
-├── drizzle.config.ts             # Drizzle config
-└── src/
-    ├── server/
-    │   ├── db.ts                 # Database connection
-    │   └── trpc.ts               # tRPC setup
-    ├── lib/trpc.ts               # Client-side tRPC
-    └── app/
-        ├── providers.tsx         # React Query + tRPC providers
-        └── api/trpc/[trpc]/route.ts  # API route
+Most frameworks make you wire things up manually: write a schema, then validation, then API routes, then hooks. You become a copy-paste machine.
+
+Archetype flips this. You define the **what** (entities), it generates the **how** (infrastructure). One source of truth. No drift between layers.
+
+**What you define:**
+```typescript
+email: text().required().unique().email()
 ```
 
-## What `generate` Creates
+**What you get:**
+- Drizzle column with unique constraint
+- Zod schema with email validation
+- tRPC router with type-safe CRUD
+- React hooks with form validation
+- All in sync. Always.
+
+## What Gets Generated
 
 ```
 generated/
-├── db/schema.ts              # Drizzle schema
+├── db/schema.ts              # Drizzle ORM schema
 ├── schemas/task.ts           # Zod validation
-├── trpc/routers/
-│   ├── task.ts               # tRPC router with CRUD
-│   └── index.ts              # Router index
-├── hooks/useTask.ts          # React hooks
+├── trpc/routers/task.ts      # tRPC CRUD router
+├── hooks/useTask.ts          # React Query hooks
 └── erd.md                    # Entity diagram
 ```
+
+## Using the Hooks
+
+```typescript
+import { useTasks, useTaskForm, useTaskRemove } from "@/generated/hooks/useTask";
+
+const { data } = useTasks();                    // Fetch all
+const { submit, register } = useTaskForm();     // Create with validation
+const { remove } = useTaskRemove();             // Delete
+```
+
+**All generated hooks:**
+| Hook | Purpose |
+|------|---------|
+| `useTasks()` | Fetch all with React Query caching |
+| `useTask(id)` | Fetch single by ID |
+| `useTaskForm()` | Create form with Zod validation |
+| `useTaskEditForm(id)` | Edit form, pre-filled |
+| `useTaskRemove()` | Delete mutation |
+| `useCreateTask()` | Raw create mutation |
+| `useUpdateTask()` | Raw update mutation |
 
 ## Define Entities
 
 ```typescript
 // archetype/entities/user.ts
-import { defineEntity, text, number, boolean, date, hasMany } from 'archetype-engine'
+import { defineEntity, text, number, boolean, hasMany } from 'archetype-engine'
 
 export const User = defineEntity('User', {
   fields: {
@@ -89,13 +96,13 @@ export const User = defineEntity('User', {
     posts: hasMany('Post'),
   },
   behaviors: {
-    timestamps: true,
-    softDelete: true,
+    timestamps: true,    // createdAt, updatedAt
+    softDelete: true,    // deletedAt instead of hard delete
   }
 })
 ```
 
-## Config File
+## Config
 
 ```typescript
 // archetype.config.ts
@@ -104,21 +111,10 @@ import { User } from './archetype/entities/user'
 import { Post } from './archetype/entities/post'
 
 export default defineConfig({
-  template: 'nextjs-drizzle-trpc',  // Template to use
   entities: [User, Post],
   database: { type: 'sqlite', file: './sqlite.db' },
 })
 ```
-
-## Templates
-
-Templates define which stack to generate code for:
-
-| Template | Stack |
-|----------|-------|
-| `nextjs-drizzle-trpc` | Next.js + Drizzle ORM + tRPC + React hooks |
-
-More templates coming soon (SvelteKit, Remix, etc.)
 
 ## Field Types
 
@@ -132,28 +128,22 @@ text()
   .min(5).max(255)      // Length constraints
   .email()              // Email format
   .url()                // URL format
-  .regex(/pattern/)     // Custom pattern
+  .regex(/pattern/)     // Custom regex
   .oneOf(['a', 'b'])    // Enum values
   .trim()               // Trim whitespace
-  .label('Display Name') // For error messages
+  .lowercase()          // Convert to lowercase
+  .uppercase()          // Convert to uppercase
+  .label('Email')       // Label for error messages
 ```
 
 ### number()
 ```typescript
-number()
-  .required()
-  .min(0).max(100)
-  .integer()
-  .positive()
+number().required().min(0).max(100).integer().positive()
 ```
 
-### boolean()
+### boolean() / date()
 ```typescript
 boolean().default(false)
-```
-
-### date()
-```typescript
 date().default('now')
 ```
 
@@ -165,61 +155,18 @@ import { hasOne, hasMany, belongsToMany } from 'archetype-engine'
 relations: {
   author: hasOne('User'),           // FK: authorId
   comments: hasMany('Comment'),     // One-to-many
-  tags: belongsToMany('Tag'),       // Many-to-many
+  tags: belongsToMany('Tag'),       // Many-to-many (junction table)
 }
 ```
 
-## Using Generated Hooks
-
-Replace `app/page.tsx` with this to see it in action:
-
-```typescript
-"use client";
-
-import { useTasks, useTaskForm, useTaskRemove } from "@/generated/hooks/useTask";
-
-export default function Home() {
-  const { data, isPending } = useTasks();
-  const { remove } = useTaskRemove();
-  const { submit, register, formState } = useTaskForm();
-
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <form onSubmit={submit} className="flex gap-2">
-        <input {...register("title")} placeholder="New task..." className="border px-2 py-1" />
-        <button className="bg-black px-3 py-1 text-white">Add</button>
-      </form>
-      {formState.errors.title && <p className="text-red-500">{formState.errors.title.message}</p>}
-      <ul className="w-64">
-        {isPending ? (
-          <p>Loading...</p>
-        ) : (
-          data?.map((task) => (
-            <li key={task.id} className="flex justify-between border-b py-1">
-              <span>{task.title}</span>
-              <button onClick={() => remove(task.id)} className="text-red-500">×</button>
-            </li>
-          ))
-        )}
-      </ul>
-    </main>
-  );
-}
-```
-
-**What you get:**
-- `useTasks()` — Fetches all tasks with React Query caching
-- `useTaskForm()` — Form with Zod validation, auto-invalidates on success
-- `useTaskRemove()` — Delete mutation with optimistic updates
-
-## CLI Commands
+## CLI
 
 ```bash
-npx archetype init           # Interactive setup
-npx archetype init --yes     # Quick setup with defaults (SQLite)
-npx archetype init --headless  # Quick setup for headless mode (no database)
-npx archetype generate       # Generate code from entities
-npx archetype view           # View ERD in browser
+npx archetype init             # Interactive setup
+npx archetype init --yes       # Defaults (SQLite)
+npx archetype init --headless  # No database (external API)
+npx archetype generate         # Generate from entities
+npx archetype view             # View ERD in browser
 ```
 
 ## Database Options
@@ -235,64 +182,42 @@ database: { type: 'postgres', url: process.env.DATABASE_URL }
 database: { type: 'mysql', url: process.env.DATABASE_URL }
 ```
 
-## Headless Mode
+---
 
-For frontend-only projects that connect to external APIs instead of a local database:
+## Advanced: Headless Mode
+
+For frontends connecting to external APIs instead of a local database.
 
 ```typescript
-// archetype.config.ts
 import { defineConfig, external } from 'archetype-engine'
-import { Product } from './archetype/entities/product'
 
 export default defineConfig({
-  template: 'nextjs-drizzle-trpc',
   mode: 'headless',
-  source: external('env:API_URL'),  // Global API source
+  source: external('env:API_URL'),
   entities: [Product],
 })
 ```
 
-Entities inherit the global source, or can override it:
-
-```typescript
-// archetype/entities/product.ts
-import { defineEntity, text, number, external } from 'archetype-engine'
-
-export const Product = defineEntity('Product', {
-  fields: {
-    sku: text().required(),
-    name: text().required(),
-    price: number().required().positive(),
-  },
-  // Optional: override global source
-  source: external('env:PRODUCTS_API', { pathPrefix: '/v1' }),
-})
+**Generates:**
+```
+generated/
+├── schemas/product.ts        # Zod validation
+├── services/
+│   ├── apiClient.ts          # Fetch wrapper
+│   └── productService.ts     # CRUD for external API
+├── trpc/routers/             # tRPC (using services)
+└── hooks/useProduct.ts       # React hooks
 ```
 
-**What headless mode generates:**
-- Zod validation schemas
-- Service layer (API client wrappers)
-- tRPC routers (using services instead of database)
-- React hooks
-
-**What it skips:**
-- Drizzle schema (no database)
-- drizzle.config.ts
+**Skips:** `db/schema.ts`, `drizzle.config.ts`
 
 ### External Source Options
 
 ```typescript
-// Simple - uses entity name for endpoints
-external('env:API_URL')
-// → GET/POST /products, GET/PUT/DELETE /products/:id
-
-// With path prefix
-external('env:API_URL', { pathPrefix: '/v1' })
-// → /v1/products
-
-// Custom resource name
-external('env:API_URL', { resourceName: 'item' })
-// → /items instead of /products
+external('env:API_URL')                              // Simple
+external('env:API_URL', { pathPrefix: '/v1' })       // Path prefix
+external('env:API_URL', { resourceName: 'item' })    // Custom resource
+external('env:API_URL', { auth: { type: 'bearer' }}) // Auth header
 
 // Override specific endpoints
 external('env:LEGACY_API', {
@@ -301,19 +226,25 @@ external('env:LEGACY_API', {
     get: 'GET /catalog/item/:sku',
   }
 })
-
-// With authentication
-external('env:API_URL', {
-  auth: { type: 'bearer' }  // or 'api-key'
-})
 ```
 
-## Development
+---
+
+## Contributing
 
 ```bash
-npm install
-npm run build
-npm run test:run
+git clone https://github.com/ifaka/archetype.git
+cd archetype
+npm install && npm run build
+npm link
+
+# In your test project:
+npm link archetype-engine
+```
+
+```bash
+npm run build       # Compile
+npm run test:run    # Run tests
 ```
 
 ## License

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run build          # Compile TypeScript to dist/
-npm run generate       # Generate code from archetype/index.ts
+npm run generate       # Run archetype generate (for local dev testing)
 npm run test:run       # Run tests
 ```
 
@@ -15,6 +15,7 @@ npm run test:run       # Run tests
 ```bash
 npx archetype init                    # Create config + entities + infrastructure
 npx archetype init --yes              # Quick setup with defaults (SQLite)
+npx archetype init --headless         # Quick setup for headless mode (no database)
 npx archetype generate                # Generate code from entities
 npx archetype generate path/to/config.ts  # Use custom config
 npx archetype view                    # View ERD in browser
