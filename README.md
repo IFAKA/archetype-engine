@@ -209,7 +209,54 @@ export default defineConfig({
 })
 ```
 
-Generates services and hooks but skips database schema. See [headless docs](docs/headless.md) for external source options.
+Generates validation, hooks, and services—skips database schema.
+
+### Generation Modes
+
+| Mode | Generates | Use case |
+|------|-----------|----------|
+| `full` | DB schema, API, validation, hooks | Full-stack with local DB (default) |
+| `headless` | Validation, hooks, services | Frontend to external API |
+| `api-only` | Validation, services | Backend services only |
+
+### External Source Options
+
+```typescript
+// Simple - uses REST conventions
+source: external('env:API_URL')
+// → GET/POST /tasks, GET/PUT/DELETE /tasks/:id
+
+// With path prefix
+source: external('env:API_URL', { pathPrefix: '/v1' })
+// → /v1/tasks, /v1/tasks/:id
+
+// Override non-standard endpoints
+source: external('env:LEGACY_API', {
+  override: {
+    list: 'GET /catalog/search',
+    get: 'GET /catalog/item/:sku',
+  }
+})
+
+// With authentication
+source: external('env:API_URL', {
+  auth: { type: 'bearer' }              // Authorization: Bearer <token>
+})
+source: external('env:API_URL', {
+  auth: { type: 'api-key', header: 'X-API-Key' }
+})
+```
+
+### Per-Entity Sources
+
+Override the global source for specific entities:
+
+```typescript
+export const Product = defineEntity('Product', {
+  fields: { name: text().required() },
+  source: external('env:CATALOG_API', { pathPrefix: '/v2' })
+})
+```
 
 ## Contributing
 
