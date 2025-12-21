@@ -2,7 +2,9 @@
 
 # Archetype Engine
 
-**Define your data model. Generate the boring parts.**
+**Stop writing CRUD boilerplate. Define your data, get type-safe infrastructure.**
+
+One entity definition → Database schema + API + Validation + React hooks. No magic, just code generation.
 
 ```typescript
 export const Task = defineEntity('Task', {
@@ -14,244 +16,270 @@ export const Task = defineEntity('Task', {
 })
 ```
 
-Run `npx archetype generate` → get Drizzle schema, Zod validation, tRPC router, React hooks.
+Run `npx archetype generate` → You get:
+- ✅ Drizzle ORM schema
+- ✅ Zod validation (min/max/email/etc)
+- ✅ tRPC router with CRUD + pagination + filtering
+- ✅ React Query hooks ready to use
+
+## Why Archetype?
+
+**For juniors:** Define data once. Get working code. No need to manually sync database ↔ API ↔ validation ↔ UI.
+
+**For seniors:** Skip the repetitive plumbing. Focus on business logic. Everything type-safe. No runtime overhead.
+
+### What makes this different from Prisma/tRPC/etc?
+
+| Tool | What it does | What you still write manually |
+|------|--------------|-------------------------------|
+| **Prisma** | Schema → Database + types | Validation, API routes, hooks, filtering logic |
+| **tRPC** | Type-safe API | Schema, validation, CRUD procedures, hooks |
+| **Zod** | Validation | Schema, API, database, hooks |
+| **Archetype** | **Schema → Everything** | Only business logic hooks (if needed) |
+
+You're not replacing your stack. You're generating the boring parts of it.
 
 ## Quick Start
 
 ```bash
+# 1. Create Next.js project
 npx create-next-app my-app && cd my-app
+
+# 2. Install
 npm install archetype-engine
+
+# 3. Initialize (creates config + entity examples + infrastructure)
 npx archetype init --yes
-```
 
-This creates:
-```
-archetype.config.ts          # Your config
-archetype/entities/task.ts   # Example Task entity
-lib/                         # Database + tRPC infrastructure
-```
-
-Now generate and run:
-```bash
+# 4. Generate everything
 npx archetype generate
+
+# 5. Push to DB and run
 npx drizzle-kit push && npm run dev
 ```
 
-## What Gets Generated
+You now have:
+- `generated/db/schema.ts` - Drizzle schema
+- `generated/schemas/task.ts` - Zod validation
+- `generated/trpc/routers/task.ts` - CRUD API with pagination/filtering
+- `generated/hooks/useTask.ts` - React Query hooks
 
+## Real Example: E-commerce Product
+
+```typescript
+const Product = defineEntity('Product', {
+  fields: {
+    sku: text().required().unique().uppercase(),
+    name: text().required().min(3).max(200),
+    price: number().required().min(0),
+    quantity: number().default(0).integer(),
+    isActive: boolean().default(true),
+  },
+  relations: {
+    category: hasOne('Category'),
+    reviews: hasMany('Review'),
+    tags: belongsToMany('Tag'),
+  },
+  behaviors: {
+    timestamps: true,   // createdAt, updatedAt
+    softDelete: true,   // deletedAt instead of DELETE
+  },
+})
 ```
-generated/
-├── db/schema.ts              # Drizzle ORM schema
-├── schemas/task.ts           # Zod validation
-├── trpc/routers/task.ts      # tRPC CRUD router
-├── hooks/useTask.ts          # React Query hooks
-└── erd.md                    # Entity diagram
+
+**This generates:**
+
+### 1. Database Schema (Drizzle)
+```typescript
+export const products = sqliteTable('products', {
+  id: text('id').primaryKey(),
+  sku: text('sku').notNull().unique(),
+  name: text('name').notNull(),
+  price: integer('price').notNull(),
+  quantity: integer('quantity').default(0).notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+  categoryId: text('category_id').references(() => categories.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+})
 ```
 
-## Using the Hooks
+### 2. Validation (Zod)
+```typescript
+export const productCreateSchema = z.object({
+  sku: z.string().min(1).toUpperCase(),
+  name: z.string().min(3).max(200),
+  price: z.number().min(0),
+  quantity: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+})
+```
 
-```tsx
+### 3. API (tRPC)
+```typescript
+export const productRouter = router({
+  list: publicProcedure
+    .input(z.object({
+      page: z.number().default(1),
+      limit: z.number().default(50),
+      where: z.object({
+        isActive: z.boolean().optional(),
+        price: z.object({ lt: z.number() }).optional(),
+      }).optional(),
+      search: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      // Built-in filtering, search, pagination
+      const items = await db.select()...
+      return { items, total, hasMore }
+    }),
+  
+  create: publicProcedure
+    .input(productCreateSchema)
+    .mutation(async ({ input }) => { /* ... */ }),
+  
+  // update, remove, get, createMany, updateMany, removeMany
+})
+```
+
+### 4. React Hooks
+```typescript
 'use client'
-import { useTasks, useTaskForm, useTaskRemove } from "@/generated/hooks/useTask"
+import { useProducts, useProductForm } from '@/generated/hooks/useProduct'
 
-export default function TaskList() {
-  const { data: tasks } = useTasks()
-  const { submit, register } = useTaskForm()
-  const { remove } = useTaskRemove()
-
+export default function ProductList() {
+  // Pagination + filtering built-in
+  const { data } = useProducts({
+    where: { isActive: true, price: { lt: 100 } },
+    search: 'laptop',
+  })
+  
+  const { submit, register } = useProductForm()
+  
   return (
-    <div>
-      <form onSubmit={submit}>
-        <input {...register('title')} placeholder="New task" />
-        <button type="submit">Add</button>
-      </form>
-      <ul>
-        {tasks?.map(task => (
-          <li key={task.id}>
-            {task.title}
-            <button onClick={() => remove(task.id)}>Delete</button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <form onSubmit={submit}>
+      <input {...register('name')} />
+      <button>Create Product</button>
+    </form>
   )
 }
 ```
 
-**All generated hooks:**
-| Hook | Purpose |
-|------|---------|
-| `useTasks()` | Fetch all with React Query caching |
-| `useTask(id)` | Fetch single by ID |
-| `useTaskForm()` | Create form with Zod validation |
-| `useTaskEditForm(id)` | Edit form, pre-filled |
-| `useTaskRemove()` | Delete mutation |
-| `useCreateTask()` | Raw create mutation |
-| `useUpdateTask()` | Raw update mutation |
+**You wrote 15 lines. You got ~300 lines of working, type-safe code.**
 
-## Defining Entities
+## Generated Hooks Reference
 
-```typescript
-// archetype/entities/task.ts
-import { defineEntity, text, boolean, date } from 'archetype-engine'
+Every entity gets these hooks:
 
-export const Task = defineEntity('Task', {
-  fields: {
-    title: text().required().min(1).max(200),
-    description: text().optional(),
-    done: boolean().default(false),
-    dueDate: date().optional(),
-  },
-  behaviors: {
-    timestamps: true,    // adds createdAt, updatedAt
-    softDelete: true,    // adds deletedAt instead of hard delete
-  },
-  protected: 'write',    // list/get public, mutations require auth
-})
-```
+| Hook | What it does |
+|------|--------------|
+| `useProducts()` | List with pagination/filtering/search |
+| `useProduct(id)` | Get single item |
+| `useProductForm()` | Create form (Zod validated) |
+| `useProductEditForm(id)` | Edit form (pre-filled) |
+| `useCreateProduct()` | Raw create mutation |
+| `useUpdateProduct()` | Raw update mutation |
+| `useProductRemove()` | Delete mutation |
+| `useCreateManyProducts()` | Bulk create (CSV imports) |
+| `useUpdateManyProducts()` | Bulk update |
+| `useRemoveManyProducts()` | Bulk delete |
 
-Register entities in your config:
-
-```typescript
-// archetype.config.ts
-import { defineConfig } from 'archetype-engine'
-import { Task } from './archetype/entities/task'
-
-export default defineConfig({
-  entities: [Task],
-  database: { type: 'sqlite', file: './sqlite.db' },
-})
-```
+All hooks use React Query with automatic caching + refetching.
 
 ## Field Types
 
 ```typescript
-// text
-text().required().unique().default('value')
-text().min(5).max(255).label('Title')
-text().email()                    // email format
-text().url()                      // URL format
-text().regex(/pattern/)           // custom regex
-text().oneOf(['draft', 'published']) // enum
-text().trim().lowercase()         // transforms
+// Text fields
+text().required().unique().min(5).max(255)
+text().email()                    // Email validation
+text().url()                      // URL validation
+text().regex(/^[A-Z]{3}$/)        // Custom regex
+text().oneOf(['draft', 'published'])
+text().trim().lowercase()         // Transforms
 
-// number
+// Numbers
 number().required().min(0).max(100)
 number().integer().positive()
 
-// boolean
+// Booleans
 boolean().default(false)
 
-// date
+// Dates
 date().optional()
-date().default('now')             // current timestamp
+date().default('now')
 
-// enum (native DB enums for PostgreSQL, text for SQLite)
+// Enums (native DB enums on PostgreSQL)
 enumField(['draft', 'published', 'archived'] as const)
-enumField(['low', 'medium', 'high'] as const)
   .required()
-  .default('medium')
+  .default('draft')
 
-// computed (virtual fields, not stored in DB)
+// Computed fields (not stored in DB)
 computed({
-  type: 'text',                   // return type: 'text' | 'number' | 'boolean' | 'date'
-  from: ['firstName', 'lastName'], // source fields
-  get: '`${firstName} ${lastName}`' // JS expression
+  type: 'text',
+  from: ['firstName', 'lastName'],
+  get: '`${firstName} ${lastName}`'
 })
 ```
 
 ## Relations
 
-Relations go inside an entity definition. The relation key becomes the foreign key name.
-
 ```typescript
-// archetype/entities/post.ts
-export const Post = defineEntity('Post', {
-  fields: {
-    title: text().required(),
-    body: text().required(),
-  },
+const Post = defineEntity('Post', {
+  fields: { title: text().required() },
   relations: {
-    // Creates authorId column pointing to User
-    author: hasOne('User'),
-
-    // Post has many Comments (Comment needs postId)
-    comments: hasMany('Comment'),
-
-    // Creates PostTag junction table
-    tags: belongsToMany('Tag'),
+    author: hasOne('User'),           // Creates authorId FK
+    comments: hasMany('Comment'),     // One-to-many
+    tags: belongsToMany('Tag'),       // Junction table
+    
+    // Many-to-many WITH extra fields (pivot data)
+    products: belongsToMany('Product').through({
+      table: 'order_items',
+      fields: {
+        quantity: number().required(),
+        unitPrice: number().required(),
+      }
+    }),
   }
 })
 ```
 
-```typescript
-import { hasOne, hasMany, belongsToMany } from 'archetype-engine'
-```
+## Pagination, Filtering, Search
 
-## CLI
-
-```bash
-npx archetype init             # Interactive setup
-npx archetype init --yes       # Defaults (SQLite)
-npx archetype generate         # Generate from entities
-npx archetype validate         # Validate without generating
-npx archetype view             # View ERD in browser
-```
-
-## AI Integration
-
-Archetype can be used by AI agents to generate apps from natural language. Instead of writing TypeScript, AI generates a simple JSON manifest.
-
-```bash
-# AI generates JSON
-echo '{
-  "entities": [
-    { "name": "User", "fields": { "email": { "type": "text", "email": true } } },
-    { "name": "Post", "fields": { "title": { "type": "text" } },
-      "relations": { "author": { "type": "hasOne", "entity": "User" } } }
-  ],
-  "database": { "type": "sqlite", "file": "./app.db" }
-}' > manifest.json
-
-# Validate
-npx archetype validate manifest.json --json
-# → { "valid": true, "errors": [] }
-
-# Generate
-npx archetype generate manifest.json --json
-# → { "success": true, "files": [...] }
-```
-
-**Flags for AI:**
-- `--json` - Output as structured JSON
-- `--stdin` - Read JSON from stdin (for piping)
-
-See the full [AI Integration Guide](documentation/AI_INTEGRATION.md) for JSON schema reference, error codes, and example system prompts.
-
-## Database Options
+**Built into every `list` procedure and hook:**
 
 ```typescript
-database: { type: 'sqlite', file: './sqlite.db' }
-database: { type: 'postgres', url: process.env.DATABASE_URL }
-database: { type: 'mysql', url: process.env.DATABASE_URL }
+// In your React component
+const { data } = useProducts({
+  page: 2,
+  limit: 50,
+  where: {
+    category: { eq: 'electronics' },
+    price: { lt: 100, gte: 10 },
+    isActive: true,
+  },
+  orderBy: { field: 'price', direction: 'asc' },
+  search: 'laptop',  // Searches across all text fields
+})
+
+// Returns: { items: [...], total: 543, page: 2, limit: 50, hasMore: true }
 ```
 
-## Authentication
+**Filter operators:**
+- **Text:** `eq`, `ne`, `contains`, `startsWith`, `endsWith`
+- **Number/Date:** `eq`, `ne`, `gt`, `gte`, `lt`, `lte`
+- **Boolean:** Direct value `{ isActive: true }`
 
-Archetype generates next-auth v5 (Auth.js) configuration with Drizzle adapter.
-
-### Setup
+## Authentication with Next-Auth v5
 
 ```bash
-npx archetype init  # Select "Yes" for authentication, choose providers
+npx archetype init  # Select "Yes" for auth, choose providers
 ```
-
-Or configure manually:
 
 ```typescript
 // archetype.config.ts
 export default defineConfig({
-  entities: [User, Post],
+  entities: [Product, Order],
   database: { type: 'sqlite', file: './sqlite.db' },
   auth: {
     enabled: true,
@@ -260,81 +288,79 @@ export default defineConfig({
 })
 ```
 
-### Generated Files
+**Generated:**
+- `src/server/auth.ts` - NextAuth config
+- `src/app/api/auth/[...nextauth]/route.ts` - Auth routes
+- `generated/db/auth-schema.ts` - User/Account/Session tables
+- `.env.example` - Required secrets
 
-```
-src/server/auth.ts              # NextAuth config with providers
-src/app/api/auth/[...nextauth]/ # Auth route handler
-generated/db/auth-schema.ts     # Auth tables (users, accounts, sessions)
-.env.example                    # Required secrets
-```
-
-### Providers
-
-| Provider | Requires |
-|----------|----------|
-| `credentials` | None (email/password) |
-| `google` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| `github` | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` |
-| `discord` | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` |
-
-## Entity Protection
-
-Control which CRUD operations require authentication per entity.
-
-### Shorthand Options
+### Protect Your Entities
 
 ```typescript
-protected: 'write'   // list/get public, create/update/remove require auth (MOST COMMON)
-protected: 'all'     // All operations require auth
-protected: true      // Same as 'all'
-protected: false     // All public (default)
+const Order = defineEntity('Order', {
+  fields: { total: number().required() },
+  
+  // Shorthand: list/get public, mutations require auth
+  protected: 'write',
+  
+  // OR granular:
+  protected: {
+    list: false,    // Public
+    get: false,     // Public
+    create: true,   // Requires auth
+    update: true,   // Requires auth
+    remove: true,   // Requires auth
+  }
+})
 ```
 
-### Granular Control
+Generated routers use `publicProcedure` vs `protectedProcedure` automatically.
+
+## Business Logic Hooks
+
+Need custom validation? Side effects after create? Add lifecycle hooks:
 
 ```typescript
-protected: {
-  list: false,     // Public
-  get: false,      // Public
-  create: true,    // Requires auth
-  update: true,    // Requires auth
-  remove: true,    // Requires auth
+const Order = defineEntity('Order', {
+  fields: { total: number() },
+  hooks: true,  // Enable all hooks
+  // OR: hooks: { beforeCreate: true, afterCreate: true }
+})
+```
+
+**Generates stub files you implement:**
+
+```typescript
+// generated/hooks/order.ts (YOU edit this)
+export const orderHooks: OrderHooks = {
+  async beforeCreate(input, ctx) {
+    // Validate inventory, modify input
+    if (input.total < 10) {
+      throw new Error('Minimum order $10')
+    }
+    return input
+  },
+
+  async afterCreate(record, ctx) {
+    // Send email, log to analytics
+    await sendOrderConfirmation(record.id, ctx.user?.email)
+  },
+
+  async beforeRemove(id, ctx) {
+    // Prevent deletion of shipped orders
+    const order = await getOrder(id)
+    if (order.status === 'shipped') {
+      throw new Error('Cannot delete shipped orders')
+    }
+  },
 }
 ```
 
-### Example
+**Available hooks:** `beforeCreate`, `afterCreate`, `beforeUpdate`, `afterUpdate`, `beforeRemove`, `afterRemove`
 
-```typescript
-// Public catalog, protected checkout
-export const Product = defineEntity('Product', {
-  fields: { name: text().required(), price: number().required() },
-  protected: 'write',  // Anyone can browse, auth required to modify
-})
+## Headless Mode (Frontend → External API)
 
-// All operations require auth
-export const Order = defineEntity('Order', {
-  fields: { total: number().required() },
-  protected: 'all',
-})
-```
-
-Generated routers use the appropriate procedure:
-
-```typescript
-// generated/trpc/routers/product.ts
-export const productRouter = router({
-  list: publicProcedure.query(...),       // Public
-  get: publicProcedure.input(...).query(...),
-  create: protectedProcedure.input(...).mutation(...),  // Requires auth
-  update: protectedProcedure.input(...).mutation(...),
-  remove: protectedProcedure.input(...).mutation(...),
-})
-```
-
-## Headless Mode
-
-For frontends connecting to external APIs instead of a local database:
+Using an existing backend? Generate only frontend code:
 
 ```bash
 npx archetype init --headless
@@ -345,100 +371,83 @@ import { defineConfig, external } from 'archetype-engine'
 
 export default defineConfig({
   mode: 'headless',
-  source: external('env:API_URL'),
-  entities: [Task],
+  source: external('env:API_URL'),  // Uses REST conventions
+  entities: [Product, Order],
 })
 ```
 
-Generates validation, hooks, and services—skips database schema.
+**Generates:** Validation, hooks, services (no database schema).
 
-### Generation Modes
-
-| Mode | Generates | Use case |
-|------|-----------|----------|
-| `full` | DB schema, API, validation, hooks | Full-stack with local DB (default) |
-| `headless` | Validation, hooks, services | Frontend to external API |
-| `api-only` | Validation, services | Backend services only |
-
-### External Source Options
-
+**Custom endpoints:**
 ```typescript
-// Simple - uses REST conventions
-source: external('env:API_URL')
-// → GET/POST /tasks, GET/PUT/DELETE /tasks/:id
-
-// With path prefix
-source: external('env:API_URL', { pathPrefix: '/v1' })
-// → /v1/tasks, /v1/tasks/:id
-
-// Override non-standard endpoints
 source: external('env:LEGACY_API', {
+  pathPrefix: '/v1',
   override: {
     list: 'GET /catalog/search',
-    get: 'GET /catalog/item/:sku',
-  }
-})
-
-// With authentication
-source: external('env:API_URL', {
-  auth: { type: 'bearer' }              // Authorization: Bearer <token>
-})
-source: external('env:API_URL', {
-  auth: { type: 'api-key', header: 'X-API-Key' }
+    get: 'GET /catalog/item/:id',
+  },
+  auth: { type: 'bearer' },  // Authorization: Bearer <token>
 })
 ```
 
-### Per-Entity Sources
+## CLI Commands
 
-Override the global source for specific entities:
+```bash
+npx archetype init                    # Interactive setup
+npx archetype init --yes              # SQLite defaults
+npx archetype init --headless         # Frontend-only
+npx archetype generate                # Generate from entities
+npx archetype validate                # Check without generating
+npx archetype view                    # View ERD diagram in browser
+```
+
+## Database Support
 
 ```typescript
-export const Product = defineEntity('Product', {
-  fields: { name: text().required() },
-  source: external('env:CATALOG_API', { pathPrefix: '/v2' })
-})
+database: { type: 'sqlite', file: './sqlite.db' }
+database: { type: 'postgres', url: process.env.DATABASE_URL }
+database: { type: 'mysql', url: process.env.DATABASE_URL }
 ```
 
-## Roadmap
+## AI Integration
 
-Features planned for the engine (code generation):
+Archetype can be controlled by AI agents to build apps from natural language. Instead of TypeScript, AI sends JSON:
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Pagination** | ✅ | `{ items, total, hasMore }` with `page`/`limit` inputs |
-| **Search & Filtering** | ✅ | `where`, `orderBy`, `search` parameters |
-| **Batch Operations** | ✅ | `createMany`, `updateMany`, `removeMany` procedures |
-| **Pivot Data on Relations** | ✅ | Many-to-many with extra fields via `.through()` |
-| **Computed Fields** | ✅ | Virtual fields derived from others (`fullName` from first + last) |
-| **Database Enums** | ✅ | Native DB enum types with `enumField()` builder |
-| **CRUD Hooks** | ✅ | Generated hook points (`beforeCreate`, `afterUpdate`) |
+```json
+{
+  "entities": [
+    { "name": "User", "fields": { "email": { "type": "text", "email": true } } },
+    { "name": "Post", "fields": { "title": { "type": "text" } },
+      "relations": { "author": { "type": "hasOne", "entity": "User" } } }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" }
+}
+```
 
-See [CLAUDE.md](CLAUDE.md#roadmap-features-to-add) for implementation details.
+```bash
+# Validate
+npx archetype validate manifest.json --json
+# → { "valid": true, "errors": [] }
 
-## Not In Scope
+# Generate
+npx archetype generate manifest.json --json
+# → { "success": true, "files": [...] }
+```
 
-These are **runtime concerns** that belong in your application, not the code generator:
-
-| Concern | Recommendation |
-|---------|----------------|
-| **File Uploads** | Use [uploadthing](https://uploadthing.com) or S3 presigned URLs |
-| **Multi-Site/Multi-Tenant Routing** | Implement as Next.js middleware |
-| **API Versioning** | Handle via route structure (`/api/v1/...`) |
-| **Background Jobs** | Use [Trigger.dev](https://trigger.dev) or BullMQ |
-| **Email/Notifications** | Use [Resend](https://resend.com) or similar |
-
-The engine generates static code from entity definitions. Runtime infrastructure is your app's responsibility.
+See [AI Integration Guide](documentation/AI_INTEGRATION.md) for system prompts and schemas.
 
 ## Contributing
 
-```bash
-git clone https://github.com/ifaka/archetype.git && cd archetype
-npm install && npm run build
-npm link
+See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details and how to add new features.
 
-# In test project:
-npm link archetype-engine
-```
+## Full Example: 15-Entity E-commerce System
+
+See [`examples/ecommerce/`](examples/ecommerce/) for a complete working system:
+- Customer, Address, Product, ProductVariant, Category, Brand, Tag
+- Order, OrderItem, Payment
+- Cart, CartItem, WishlistItem, Review
+
+**60 lines of entity definitions → 5,000+ lines of generated code** (schema, validation, API, hooks, i18n).
 
 ## License
 
