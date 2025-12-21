@@ -1,20 +1,41 @@
 # AI Integration Guide
 
-Use archetype-engine in AI workflows to let users describe apps in natural language and have AI generate the code.
+Use archetype-engine with AI to generate full-stack apps from natural language descriptions.
 
-## AI Toolkit (New!)
+## What Archetype Generates
 
-archetype-engine includes ready-to-use tools for modern AI frameworks:
+When you run `npx archetype generate`, archetype creates backend infrastructure:
+
+```
+generated/
+├── db/schema.ts           # Drizzle ORM schema
+├── schemas/*.ts           # Zod validation schemas
+├── trpc/routers/*.ts      # tRPC CRUD endpoints
+├── hooks/use*.ts          # React Query + React Hook Form hooks
+└── erd.md                 # Entity relationship diagram
+```
+
+**Archetype does NOT generate UI components.** It generates hooks that your UI (or AI-generated UI) can import:
+
+```tsx
+import { useTasks, useTaskForm } from '@/generated/hooks/useTask'
+```
+
+---
+
+## AI Toolkit
+
+The simplest way to use archetype with AI. Import ready-to-use tools for your AI framework.
+
+### Vercel AI SDK
 
 ```typescript
 import { createManifestBuilder, aiTools } from 'archetype-engine/ai'
 import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 
-// Create a builder to track state across tool calls
 const builder = createManifestBuilder()
 
-// Use with Vercel AI SDK
 const result = await generateText({
   model: openai('gpt-4o'),
   tools: aiTools.vercel(builder),
@@ -23,90 +44,66 @@ const result = await generateText({
   maxSteps: 10
 })
 
-// Generate the app
-const { files, success } = await builder.generate()
-```
-
-Available adapters:
-- `aiTools.vercel(builder)` - Vercel AI SDK
-- `aiTools.openai()` - OpenAI function calling
-- `aiTools.anthropic()` - Anthropic tool use
-
-## Why Use Archetype with AI?
-
-| Without Archetype | With Archetype |
-|-------------------|----------------|
-| AI generates 10+ files per entity | AI generates 1 JSON file |
-| AI must keep files in sync | Engine guarantees sync |
-| Errors are text strings | Structured JSON errors |
-| Security depends on AI | Safety is built-in |
-
-## Quick Start
-
-```bash
-# 1. AI generates a JSON manifest
-cat > manifest.json << 'EOF'
-{
-  "entities": [
-    {
-      "name": "User",
-      "fields": {
-        "email": { "type": "text", "email": true, "unique": true },
-        "name": { "type": "text" }
-      }
-    }
-  ],
-  "database": { "type": "sqlite", "file": "./app.db" }
+// Validate and generate
+const validation = builder.validate()
+if (!validation.valid) {
+  console.error(validation.errors)
+} else {
+  const { files, success } = await builder.generate()
 }
-EOF
-
-# 2. Validate (optional but recommended)
-npx archetype validate manifest.json --json
-# Returns: { "valid": true, "errors": [], "warnings": [] }
-
-# 3. Generate all code
-npx archetype generate manifest.json --json
-# Returns: { "success": true, "files": [...] }
 ```
 
-## CLI Commands
+### Available Adapters
+
+| Adapter | Usage |
+|---------|-------|
+| `aiTools.vercel(builder)` | Vercel AI SDK - returns tools with Zod schemas |
+| `aiTools.openai()` | OpenAI function calling format |
+| `aiTools.anthropic()` | Anthropic tool use format |
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `add_entity` | Add entity with fields, relations, behaviors |
+| `update_entity` | Modify existing entity |
+| `remove_entity` | Remove entity |
+| `set_database` | Configure database (sqlite, postgres, mysql) |
+| `set_auth` | Enable authentication with providers |
+| `validate` | Check manifest for errors |
+| `generate` | Generate all code |
+
+---
+
+## CLI for AI Agents
+
+AI agents can use the CLI with `--json` flag for structured output.
 
 ### Validate
 
-Check if a manifest is valid before generating:
-
 ```bash
 npx archetype validate manifest.json --json
 ```
 
-Output on success:
+Success:
 ```json
-{
-  "valid": true,
-  "errors": [],
-  "warnings": []
-}
+{ "valid": true, "errors": [], "warnings": [] }
 ```
 
-Output on failure:
+Failure:
 ```json
 {
   "valid": false,
-  "errors": [
-    {
-      "code": "RELATION_TARGET_NOT_FOUND",
-      "path": "Post.relations.author.entity",
-      "message": "Entity 'User' not found in manifest",
-      "suggestion": "Add entity 'User' to the entities array, or fix the entity name"
-    }
-  ],
-  "warnings": []
+  "errors": [{
+    "code": "RELATION_TARGET_NOT_FOUND",
+    "path": "Post.relations.author.entity",
+    "message": "Entity 'User' not found",
+    "suggestion": "Add entity 'User' or fix the name"
+  }]
 }
 ```
 
 ### Generate
-
-Generate code from a manifest:
 
 ```bash
 npx archetype generate manifest.json --json
@@ -118,21 +115,19 @@ Output:
   "success": true,
   "template": "nextjs-drizzle-trpc",
   "entities": ["User", "Post"],
-  "files": [
-    "generated/db/schema.ts",
-    "generated/schemas/user.ts",
-    "generated/hooks/useUser.ts"
-  ]
+  "files": ["generated/db/schema.ts", "generated/hooks/useUser.ts"]
 }
 ```
 
-### Read from stdin
+### Stdin Mode
 
-Pipe JSON directly without creating a file:
+Pipe JSON directly:
 
 ```bash
 echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin --json
 ```
+
+---
 
 ## JSON Schema Reference
 
@@ -141,22 +136,21 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 ```json
 {
   "type": "text" | "number" | "boolean" | "date",
-  "required": true,      // default: true
-  "optional": true,      // shorthand for required: false
+  "required": true,
+  "optional": true,
   "unique": false,
   "default": "value",
   "label": "Display Name",
 
   // Text validations
-  "min": 5,              // minimum length
-  "max": 100,            // maximum length
+  "min": 5,
+  "max": 100,
   "email": true,
   "url": true,
   "regex": "^[a-z]+$",
-  "oneOf": ["a", "b"],
+  "oneOf": ["draft", "published"],
   "trim": true,
   "lowercase": true,
-  "uppercase": true,
 
   // Number validations
   "integer": true,
@@ -170,7 +164,7 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 {
   "type": "hasOne" | "hasMany" | "belongsToMany",
   "entity": "TargetEntity",
-  "field": "customFieldName"  // optional
+  "field": "customFieldName"
 }
 ```
 
@@ -180,29 +174,28 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 {
   "name": "User",
   "fields": {
-    "email": { "type": "text", "email": true }
+    "email": { "type": "text", "email": true, "unique": true },
+    "name": { "type": "text" }
   },
   "relations": {
     "posts": { "type": "hasMany", "entity": "Post" }
   },
   "behaviors": {
-    "timestamps": true,     // adds createdAt, updatedAt (default: true)
-    "softDelete": false,    // adds deletedAt (default: false)
-    "audit": false          // enable audit logging (default: false)
+    "timestamps": true,
+    "softDelete": false,
+    "audit": false
   },
-  "auth": false,            // mark as auth entity
-  "protected": "write"      // see protection options below
+  "protected": "write"
 }
 ```
 
 ### Protection Options
 
 ```json
-// Shorthand
-"protected": false        // all public (default)
-"protected": true         // all operations require auth
-"protected": "all"        // same as true
-"protected": "write"      // list/get public, create/update/remove protected
+"protected": false        // All public (default)
+"protected": true         // All require auth
+"protected": "all"        // Same as true
+"protected": "write"      // list/get public, mutations protected
 
 // Granular
 "protected": {
@@ -214,7 +207,7 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 }
 ```
 
-### Manifest
+### Complete Manifest
 
 ```json
 {
@@ -224,8 +217,8 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 
   "database": {
     "type": "sqlite" | "postgres" | "mysql",
-    "file": "./app.db",    // SQLite only
-    "url": "env:DATABASE_URL"  // Postgres/MySQL
+    "file": "./app.db",
+    "url": "env:DATABASE_URL"
   },
 
   "auth": {
@@ -241,26 +234,30 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 }
 ```
 
+---
+
 ## Error Codes
 
 | Code | Description |
 |------|-------------|
 | `INVALID_ENTITY_NAME` | Entity name must be PascalCase |
 | `DUPLICATE_ENTITY` | Entity name already exists |
-| `INVALID_FIELD_TYPE` | Field type must be text/number/boolean/date |
+| `INVALID_FIELD_TYPE` | Must be text/number/boolean/date |
 | `INVALID_FIELD_NAME` | Field name must be camelCase |
 | `RELATION_TARGET_NOT_FOUND` | Referenced entity doesn't exist |
 | `DATABASE_REQUIRED` | Mode 'full' requires database config |
 | `AUTH_REQUIRED_FOR_PROTECTED` | Protected entities need auth enabled |
-| `INVALID_DATABASE_TYPE` | Database type must be sqlite/postgres/mysql |
+| `INVALID_DATABASE_TYPE` | Must be sqlite/postgres/mysql |
 | `SQLITE_REQUIRES_FILE` | SQLite needs file path |
 | `POSTGRES_REQUIRES_URL` | Postgres/MySQL need connection URL |
 | `INVALID_PROVIDER` | Auth provider not recognized |
-| `INVALID_MODE` | Mode must be full/headless/api-only |
+| `INVALID_MODE` | Must be full/headless/api-only |
 
-## Example System Prompt
+---
 
-Use this prompt template for AI agents:
+## System Prompt Template
+
+Use this for AI agents generating manifests:
 
 ```
 You are an app builder. When users describe their app, generate a JSON manifest.
@@ -274,18 +271,9 @@ Fields:
 - date: { type: "date", default?: "now" }
 
 Relations:
-- hasOne: Foreign key on this entity
-- hasMany: Foreign key on target entity
-- belongsToMany: Creates junction table
-
-## Workflow
-
-1. Generate manifest.json based on user description
-2. Run: npx archetype validate manifest.json --json
-3. If errors, fix and retry
-4. Run: npx archetype generate manifest.json --json
-5. Run: npx drizzle-kit push
-6. Run: npm run dev
+- hasOne: Foreign key on this entity (e.g., Post hasOne User = authorId on Post)
+- hasMany: Foreign key on target (e.g., User hasMany Post)
+- belongsToMany: Creates junction table (e.g., Post belongsToMany Tag)
 
 ## Example
 
@@ -298,8 +286,7 @@ User: "I want a blog with users and posts"
       "fields": {
         "email": { "type": "text", "email": true, "unique": true },
         "name": { "type": "text" }
-      },
-      "behaviors": { "timestamps": true }
+      }
     },
     {
       "name": "Post",
@@ -315,344 +302,23 @@ User: "I want a blog with users and posts"
     }
   ],
   "database": { "type": "sqlite", "file": "./app.db" },
-  "auth": { "enabled": true, "providers": ["credentials"] },
-  "template": "nextjs-drizzle-trpc"
-}
-```
-
-## Example: Building an AI App Builder
-
-This example walks through building an "AI App Builder" - a product where users describe an app and get working code.
-
----
-
-### Part 1: Building the AI App Builder
-
-Create a Next.js app that will be your AI Builder:
-
-```bash
-npx create-next-app@latest ai-app-builder
-cd ai-app-builder
-npm install archetype-engine ai @ai-sdk/openai
-```
-
-#### File 1: The Generation Logic (Using AI Toolkit)
-
-```typescript
-// lib/generate-app.ts
-import { createManifestBuilder, aiTools } from 'archetype-engine/ai'
-import { generateText } from 'ai'
-import { openai } from '@ai-sdk/openai'
-
-export async function generateApp(description: string) {
-  // 1. Create builder to track state across tool calls
-  const builder = createManifestBuilder()
-
-  // 2. AI uses tools to build the manifest
-  const result = await generateText({
-    model: openai('gpt-4o'),
-    tools: aiTools.vercel(builder),
-    system: SYSTEM_PROMPT,
-    prompt: description,
-    maxSteps: 15 // Allow multiple tool calls
-  })
-
-  // 3. Validate
-  const validation = builder.validate()
-  if (!validation.valid) {
-    return { success: false, errors: validation.errors }
-  }
-
-  // 4. Generate backend with archetype-engine
-  const { files, success, errors } = await builder.generate()
-  if (!success) {
-    return { success: false, errors }
-  }
-
-  // 5. AI generates UI components using the hooks
-  const uiResult = await generateText({
-    model: openai('gpt-4o'),
-    system: UI_PROMPT,
-    prompt: `Generate UI for these entities: ${builder.entities.map(e => e.name).join(', ')}`
-  })
-
-  return {
-    success: true,
-    files,
-    entities: builder.entities.map(e => e.name),
-    ui: uiResult.text
-  }
+  "auth": { "enabled": true, "providers": ["credentials"] }
 }
 
-const SYSTEM_PROMPT = `You are an app builder. Use the tools to build what the user describes:
+## Workflow
 
-1. add_entity - Create entities (User, Post, Task, etc.) with fields and relations
-2. set_database - Configure database (sqlite recommended for demos)
-3. set_auth - Enable auth if the user wants login
-4. validate - Check for errors before generating
-5. generate - Create the app
-
-Ask clarifying questions if needed. Build incrementally.`
-
-const UI_PROMPT = `Generate React components that use the archetype hooks.
-For entity "Task", use: useTasks(), useTask(id), useCreateTask(), useUpdateTask(), useDeleteTask()
-Create list pages, forms, and detail views. Use Tailwind CSS.`
-```
-
-This approach uses **function calling** - the AI calls tools like `add_entity` and `set_database` incrementally, building the manifest step by step. archetype-engine validates and generates the backend.
-
-#### Alternative: Direct JSON Approach
-
-If you prefer the AI to generate JSON directly (simpler but less interactive):
-
-```typescript
-// lib/generate-app.ts
-import { validateManifest, parseManifestJSON, getTemplate, runTemplate } from 'archetype-engine'
-import { generateText } from 'ai'
-import { openai } from '@ai-sdk/openai'
-
-export async function generateApp(description: string) {
-  // 1. AI generates manifest JSON
-  const result = await generateText({
-    model: openai('gpt-4o'),
-    system: MANIFEST_PROMPT,
-    prompt: description
-  })
-
-  const manifestJSON = JSON.parse(result.text)
-
-  // 2. Validate
-  const validation = validateManifest(manifestJSON)
-  if (!validation.valid) {
-    return { success: false, errors: validation.errors }
-  }
-
-  // 3. Generate with archetype
-  const manifest = parseManifestJSON(manifestJSON)
-  const template = await getTemplate('nextjs-drizzle-trpc')
-  const files = await runTemplate(template!, manifest)
-
-  return { success: true, files, entities: manifest.entities.map(e => e.name) }
-}
-
-const MANIFEST_PROMPT = `Generate an archetype-engine manifest JSON.
-Format: { "entities": [...], "database": { "type": "sqlite", "file": "./app.db" } }
-Entity: { "name": "User", "fields": { "email": { "type": "text", "email": true } }, "relations": { "posts": { "type": "hasMany", "entity": "Post" } } }`
-```
-
-#### File 2: API Endpoint
-
-```typescript
-// app/api/generate/route.ts
-import { generateApp } from '@/lib/generate-app'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
-
-export async function POST(req: Request) {
-  const { description, outputDir = './generated-app' } = await req.json()
-
-  const result = await generateApp(description)
-
-  if (!result.success) {
-    return Response.json(result, { status: 400 })
-  }
-
-  // Write files to disk
-  for (const file of result.files) {
-    const filePath = path.join(outputDir, file.path)
-    await mkdir(path.dirname(filePath), { recursive: true })
-    await writeFile(filePath, file.content)
-  }
-
-  return Response.json({
-    success: true,
-    entities: result.entities,
-    filesWritten: result.files.length,
-    outputDir
-  })
-}
-```
-
-#### File 3: Simple Chat UI
-
-```typescript
-// app/page.tsx
-'use client'
-import { useState } from 'react'
-
-export default function AIAppBuilder() {
-  const [input, setInput] = useState('')
-  const [status, setStatus] = useState<'idle' | 'generating' | 'done'>('idle')
-  const [result, setResult] = useState<any>(null)
-
-  async function handleGenerate() {
-    setStatus('generating')
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: input })
-    })
-    const data = await res.json()
-    setResult(data)
-    setStatus('done')
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">AI App Builder</h1>
-        <p className="text-gray-600 mb-6">Describe your app and get working code.</p>
-
-        <textarea
-          className="w-full h-32 p-4 border rounded-lg mb-4"
-          placeholder="I want a task manager where users can create projects and assign tasks to team members..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-        />
-
-        <button
-          onClick={handleGenerate}
-          disabled={status === 'generating'}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium disabled:opacity-50"
-        >
-          {status === 'generating' ? 'Generating...' : 'Generate App'}
-        </button>
-
-        {result && (
-          <div className="mt-6 p-4 bg-white rounded-lg border">
-            <h2 className="font-bold text-lg mb-2">
-              {result.success ? '✅ App Generated!' : '❌ Error'}
-            </h2>
-            {result.success ? (
-              <>
-                <p className="text-gray-600 mb-2">
-                  Created {result.filesWritten} files with entities: {result.entities.join(', ')}
-                </p>
-                <code className="block bg-gray-100 p-2 rounded text-sm">
-                  cd {result.outputDir} && npm install && npx drizzle-kit push && npm run dev
-                </code>
-              </>
-            ) : (
-              <ul className="text-red-600">
-                {result.errors.map((e: any, i: number) => (
-                  <li key={i}>{e.message}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-```
-
-Your AI App Builder is ready. Run it with `npm run dev`.
-
----
-
-### Part 2: Using the AI App Builder
-
-A user opens your AI App Builder and types:
-
-> "I want a project management app where teams can create projects, add tasks with priorities (low, medium, high), assign tasks to members, and track due dates"
-
-The AI App Builder:
-1. Sends description to AI
-2. AI returns:
-   - **manifest**: entities, fields, relations (for archetype-engine)
-   - **ui**: React components that use the hooks archetype will generate
-3. archetype-engine validates manifest → generates backend (schema, API, hooks)
-4. Combines backend files + AI-generated UI files
-5. Writes complete app to `./generated-app`
-
-The key: **AI generates the UI components that use archetype's hooks**. The AI knows that archetype will create `useTasks()`, `useCreateTask()`, etc., so it generates pages that import and use them
-
----
-
-### Part 3: The Generated App
-
-The user gets a complete Next.js app:
-
-```
-generated-app/
-├── generated/
-│   ├── db/
-│   │   └── schema.ts              # Drizzle tables
-│   ├── schemas/
-│   │   ├── team.ts                # Zod validation
-│   │   ├── project.ts
-│   │   ├── task.ts
-│   │   └── member.ts
-│   ├── trpc/routers/
-│   │   ├── team.ts                # CRUD endpoints
-│   │   ├── project.ts
-│   │   ├── task.ts
-│   │   └── member.ts
-│   └── hooks/
-│       ├── useTeam.ts             # React Query hooks
-│       ├── useProject.ts
-│       ├── useTask.ts
-│       └── useMember.ts
-├── app/(generated)/
-│   ├── team/
-│   │   ├── page.tsx               # Team list
-│   │   └── new/page.tsx           # Create team form
-│   ├── project/
-│   │   ├── page.tsx               # Project list
-│   │   └── new/page.tsx           # Create project form
-│   ├── task/
-│   │   ├── page.tsx               # Task list with priority
-│   │   └── new/page.tsx           # Create task form
-│   └── member/
-│       ├── page.tsx               # Member list
-│       └── new/page.tsx           # Add member form
-└── package.json
-```
-
-The user runs:
-
-```bash
-cd generated-app
-npm install
-npx drizzle-kit push
-npm run dev
-```
-
-And they have a working app:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Tasks                                           [Add Task] │
-├─────────────────────────────────────────────────────────────┤
-│  title          │ priority │ dueDate    │ assignee         │
-├─────────────────────────────────────────────────────────────┤
-│  Setup database │ high     │ 2024-01-15 │ Alice            │
-│  Write tests    │ medium   │ 2024-01-20 │ Bob              │
-│  Deploy app     │ low      │ 2024-01-25 │ Charlie          │
-└─────────────────────────────────────────────────────────────┘
+1. Generate manifest based on user description
+2. Run: npx archetype validate manifest.json --json
+3. If errors, fix and retry
+4. Run: npx archetype generate manifest.json --json
+5. Tell user to run: npx drizzle-kit push && npm run dev
 ```
 
 ---
-
-### Why archetype-engine Makes This Work
-
-| Without archetype-engine | With archetype-engine |
-|--------------------------|----------------------|
-| AI generates 15+ backend files that must stay in sync | AI generates 1 JSON manifest for backend |
-| AI must understand Drizzle, Zod, tRPC internals | AI just describes entities and fields |
-| Errors are unstructured strings | Structured errors with fix suggestions |
-| Type safety depends on AI | Types guaranteed by engine |
-
-**The division of labor:**
-- **archetype-engine**: Generates the backend (schema, validation, API, hooks) - the hard part that must stay in sync
-- **AI**: Generates the manifest + UI components that use the hooks - the creative part
-
-The AI doesn't need to understand database schemas or tRPC. It just describes entities and writes React components that import `useTasks()`, `useCreateTask()`, etc. archetype-engine ensures those hooks exist and work correctly
 
 ## Programmatic API
 
-You can also use archetype-engine programmatically:
+For direct control without AI frameworks:
 
 ```typescript
 import {
@@ -662,10 +328,10 @@ import {
   runTemplate,
 } from 'archetype-engine'
 
-// 1. Parse JSON to IR
+// 1. Parse JSON to internal representation
 const manifest = parseManifestJSON({
   entities: [
-    { name: 'User', fields: { email: { type: 'text' } } }
+    { name: 'User', fields: { email: { type: 'text', email: true } } }
   ],
   database: { type: 'sqlite', file: './app.db' }
 })
@@ -677,22 +343,69 @@ if (!validation.valid) {
   process.exit(1)
 }
 
-// 3. Get template
+// 3. Get template and generate
 const template = await getTemplate('nextjs-drizzle-trpc')
-
-// 4. Generate (dry run to preview)
-const files = await runTemplate(template, manifest, { dryRun: true })
-console.log('Will generate:', files.map(f => f.path))
-
-// 5. Generate for real
-await runTemplate(template, manifest)
+const files = await runTemplate(template, manifest)
 ```
 
-## Target Audience
+---
 
-This integration is designed for:
+## Why Use Archetype with AI?
 
-- **AI-powered product builders** - Let users describe apps in natural language
-- **No-code platform developers** - Add AI-generated backends to visual builders
-- **AI coding assistants** - Scaffold full-stack apps from prompts
-- **Rapid prototyping tools** - Generate working apps from specifications
+| Without Archetype | With Archetype |
+|-------------------|----------------|
+| AI generates 10+ files per entity | AI generates 1 JSON manifest |
+| AI must keep files in sync | Engine guarantees sync |
+| Errors are text strings | Structured JSON errors with suggestions |
+| Type safety depends on AI | Types guaranteed by engine |
+
+**The division of labor:**
+- **archetype-engine**: Generates backend (schema, validation, API, hooks)
+- **AI**: Describes entities and optionally generates UI that uses the hooks
+
+The AI doesn't need to understand Drizzle, Zod, or tRPC. It describes entities, and archetype ensures the generated hooks work correctly.
+
+---
+
+## Appendix: Direct JSON Approach
+
+An alternative to the AI Toolkit. The AI generates the complete JSON manifest in one shot:
+
+```typescript
+import { validateManifest, parseManifestJSON, getTemplate, runTemplate } from 'archetype-engine'
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
+
+export async function generateFromDescription(description: string) {
+  // 1. AI generates manifest JSON directly
+  const result = await generateText({
+    model: openai('gpt-4o'),
+    system: MANIFEST_PROMPT, // Use the system prompt template above
+    prompt: description
+  })
+
+  const manifestJSON = JSON.parse(result.text)
+
+  // 2. Validate
+  const validation = validateManifest(manifestJSON)
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors }
+  }
+
+  // 3. Generate
+  const manifest = parseManifestJSON(manifestJSON)
+  const template = await getTemplate('nextjs-drizzle-trpc')
+  const files = await runTemplate(template!, manifest)
+
+  return { success: true, files }
+}
+```
+
+**Comparison:**
+
+| AI Toolkit (Function Calling) | Direct JSON |
+|-------------------------------|-------------|
+| Interactive, step-by-step | Single-shot generation |
+| AI can ask clarifying questions | AI must infer everything upfront |
+| Better for complex apps | Better for simple apps |
+| Uses `aiTools.vercel(builder)` | Uses `parseManifestJSON()` |
