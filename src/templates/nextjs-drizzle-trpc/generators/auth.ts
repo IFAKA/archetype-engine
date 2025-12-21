@@ -1,11 +1,31 @@
-// Auth.js (next-auth v5) schema generator
+/**
+ * Auth.js (next-auth v5) Schema Generator
+ *
+ * Generates database schema for Auth.js/NextAuth.js authentication tables.
+ * Only runs when auth.enabled is true in the manifest.
+ *
+ * Generated files:
+ * - db/auth-schema.ts - Auth tables (users, accounts, sessions, verificationTokens)
+ *
+ * Features:
+ * - Supports SQLite, PostgreSQL, and MySQL databases
+ * - Uses official Auth.js/Drizzle adapter schema format
+ * - Includes proper foreign key references with cascade delete
+ * - Uses composite primary keys for accounts and verification tokens
+ *
+ * @module generators/auth
+ */
 
 import type { Generator, GeneratedFile } from '../../../template/types'
 import type { GeneratorContext } from '../../../template/context'
 import type { ManifestIR } from '../../../manifest'
 
 /**
- * Generate SQLite auth schema
+ * Generate SQLite-specific auth schema
+ *
+ * Uses sqliteTable with integer timestamps (timestamp_ms mode).
+ *
+ * @returns SQLite auth schema as string
  */
 function generateSqliteAuthSchema(): string {
   return `// Auto-generated Auth.js schema for SQLite
@@ -76,7 +96,11 @@ export const verificationTokens = sqliteTable(
 }
 
 /**
- * Generate PostgreSQL auth schema
+ * Generate PostgreSQL-specific auth schema
+ *
+ * Uses pgTable with native timestamp columns (date mode).
+ *
+ * @returns PostgreSQL auth schema as string
  */
 function generatePostgresAuthSchema(): string {
   return `// Auto-generated Auth.js schema for PostgreSQL
@@ -148,7 +172,11 @@ export const verificationTokens = pgTable(
 }
 
 /**
- * Generate MySQL auth schema
+ * Generate MySQL-specific auth schema
+ *
+ * Uses mysqlTable with varchar fields (255 length) and timestamp columns.
+ *
+ * @returns MySQL auth schema as string
  */
 function generateMysqlAuthSchema(): string {
   return `// Auto-generated Auth.js schema for MySQL

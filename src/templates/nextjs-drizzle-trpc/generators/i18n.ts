@@ -1,4 +1,25 @@
-// i18n translation files generator
+/**
+ * i18n Translation Files Generator
+ *
+ * Generates JSON translation files for internationalized validation messages.
+ * Only runs when multiple languages are configured in the manifest.
+ *
+ * Generated files:
+ * - i18n/{lang}/validation.json - Validation error messages
+ * - i18n/{lang}/fields.json - Field labels per entity
+ * - i18n/{lang}/entities.json - Entity display names
+ *
+ * Supported languages (with built-in translations):
+ * - en (English), es (Spanish), fr (French), de (German)
+ * - pt (Portuguese), it (Italian), ja (Japanese), zh (Chinese), ko (Korean)
+ *
+ * Features:
+ * - Parameterized message templates ({field}, {min}, {max}, {values})
+ * - Compatible with next-intl ICU message format
+ * - Falls back to English for unsupported languages
+ *
+ * @module generators/i18n
+ */
 
 import type { Generator, GeneratedFile } from '../../../template/types'
 import type { GeneratorContext } from '../../../template/context'
@@ -126,6 +147,14 @@ const defaultValidationMessages: Record<string, Record<string, string>> = {
   },
 }
 
+/**
+ * Generate field labels mapping from entities
+ *
+ * Extracts labels from field configurations, falling back to field names.
+ *
+ * @param entities - Array of entity IRs with field definitions
+ * @returns Nested object of entity -> field -> label
+ */
 function generateFieldLabels(entities: EntityIR[]): Record<string, Record<string, string>> {
   const labels: Record<string, Record<string, string>> = {}
 

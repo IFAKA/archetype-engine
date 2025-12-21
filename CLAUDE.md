@@ -257,3 +257,296 @@ npm run test:run   # Single run
 ```
 
 Tests are in `tests/` directory using Vitest.
+
+## Roadmap: Features to Add
+
+The following features are planned for the engine. Each addresses a gap identified from real-world migration scenarios (e.g., migrating from Salesforce Commerce Cloud).
+
+### Pagination in tRPC Routers
+
+**Status:** ✅ Implemented
+
+**Why needed:** Current `list` procedures return all records. Real applications need cursor/offset pagination for large datasets. Without this, listing 10,000 products would crash the browser.
+
+**Implementation:** Added `page`, `limit` inputs to list procedures. Returns `{ items, total, page, limit, hasMore }`. Hooks support `useTasks({ page: 2, limit: 50 })`.
+
+### Search and Filtering
+
+**Status:** ✅ Implemented
+
+**Why needed:** CRUD list endpoints need filtering (e.g., "products where category = 'electronics' and price < 100"). E-commerce, admin panels, and dashboards all require this.
+
+**Implementation:** List procedures accept `where`, `orderBy`, and `search` parameters.
+
+**Filter operators by field type:**
+- **Text:** `eq`, `ne`, `contains`, `startsWith`, `endsWith` (or shorthand: `{ name: 'value' }`)
+- **Number/Date:** `eq`, `ne`, `gt`, `gte`, `lt`, `lte`
+- **Boolean:** direct value (`{ isActive: true }`)
+
+**Usage example (hooks):**
+```typescript
+// Filter by field values
+const { data } = useProducts({
+  where: {
+    category: { eq: 'electronics' },
+    price: { lt: 100 },
+    isActive: true,
+  },
+  orderBy: { field: 'price', direction: 'asc' },
+  search: 'laptop',  // Searches across all text fields
+})
+```
+
+**Generated helpers in routers:**
+- `buildFilters()` - Converts `where` input to Drizzle conditions
+- `buildSearch()` - Creates OR condition across text fields with LIKE
+- `buildOrderBy()` - Maps field name + direction to Drizzle orderBy
+
+### Batch Operations
+
+**Status:** ✅ Implemented
+
+**Why needed:** Bulk create/update/delete operations are common (import CSV, delete selected items, update all prices). Single-record CRUD is insufficient for admin workflows.
+
+**Implementation:** Added `createMany`, `updateMany`, `removeMany` procedures with array inputs.
+
+**Procedures:**
+- `createMany` - Accepts `{ items: Entity[] }`, returns `{ created: Entity[], count: number }`
+- `updateMany` - Accepts `{ items: { id, data }[] }`, returns `{ updated: Entity[], count: number }`
+- `removeMany` - Accepts `{ ids: string[] }`, returns `{ removed: Entity[], count: number }`
+
+**Limits:** All batch operations are limited to 100 items per request.
+
+**Hooks:**
+```typescript
+const { createMany, isPending } = useCreateManyProducts()
+const { updateMany } = useUpdateManyProducts()
+const { removeMany } = useRemoveManyProducts()
+
+// Import products from CSV
+await createMany(csvProducts)
+
+// Update prices in bulk
+await updateMany(products.map(p => ({ id: p.id, data: { price: p.price * 1.1 } })))
+
+// Delete selected items
+await removeMany(selectedIds)
+```
+
+### Complex Relations (Many-to-Many with Pivot Data)
+
+**Status:** ✅ Implemented
+
+**Why needed:** `belongsToMany` creates junction tables, but needs to store extra data on the relation (e.g., `quantity` on OrderItem, `role` on UserOrganization). Essential for e-commerce (cart items, order lines).
+
+**Implementation:** Added `.through()` method to `belongsToMany()` for pivot fields.
+
+**Usage:**
+```typescript
+// Order with products and pivot data (quantity, unit price)
+const Order = defineEntity('Order', {
+  fields: {
+    orderNumber: text().required(),
+    status: text().default('pending'),
+  },
+  relations: {
+    products: belongsToMany('Product').through({
+      table: 'order_items',  // Optional custom table name
+      fields: {
+        quantity: number().required().min(1),
+        unitPrice: number().required(),
+        discount: number().default(0),
+      }
+    }),
+  },
+})
+```
+
+**Generated schema:**
+```typescript
+export const orderItems = sqliteTable('order_items', {
+  orderId: text('order_id').notNull().references(() => orders.id),
+  productId: text('product_id').notNull().references(() => products.id),
+  quantity: integer('quantity').notNull(),
+  unitPrice: integer('unit_price').notNull(),
+  discount: integer('discount').default(0),
+})
+```
+
+### Computed/Virtual Fields
+
+**Status:** ✅ Implemented
+
+**Why needed:** Fields derived from other fields (e.g., `fullName` from `firstName` + `lastName`, `totalPrice` from `price * quantity`). Reduces duplication and ensures consistency.
+
+**Implementation:** Added `computed()` field type. Computed fields are:
+- Excluded from database schema (not stored)
+- Excluded from create/update validation schemas
+- Included in all API responses (computed at runtime)
+
+**Usage:**
+```typescript
+const Person = defineEntity('Person', {
+  fields: {
+    firstName: text().required(),
+    lastName: text().required(),
+    fullName: computed({
+      type: 'text',
+      from: ['firstName', 'lastName'],
+      get: '`${firstName} ${lastName}`'
+    }),
+  },
+})
+
+const OrderLine = defineEntity('OrderLine', {
+  fields: {
+    price: number().required(),
+    quantity: number().required(),
+    total: computed({
+      type: 'number',
+      from: ['price', 'quantity'],
+      get: 'price * quantity'
+    }),
+  },
+})
+```
+
+**Generated router:**
+```typescript
+// Helper function added to routers with computed fields
+function withComputedFields<T extends Record<string, any>>(record: T) {
+  return {
+    ...record,
+    fullName: `${firstName} ${lastName}`,
+  }
+}
+
+// Applied to all responses
+list: ...query(async () => {
+  const items = await db.select()...
+  return { items: items.map(withComputedFields), ... }
+})
+```
+
+### Enum Fields with Database Support
+
+**Status:** ✅ Implemented
+
+**Why needed:** `text().oneOf(['draft', 'published'])` validates but doesn't create database enums. PostgreSQL native enums are more efficient and self-documenting.
+
+**Implementation:** Added `enumField()` function that:
+- Generates native `pgEnum` types for PostgreSQL
+- Uses text columns for SQLite (validation via Zod)
+- Generates `z.enum()` in validation schemas
+
+**Usage:**
+```typescript
+import { defineEntity, enumField } from 'archetype-engine'
+
+const Post = defineEntity('Post', {
+  fields: {
+    status: enumField(['draft', 'published', 'archived'] as const)
+      .required()
+      .default('draft'),
+  },
+})
+
+const Order = defineEntity('Order', {
+  fields: {
+    priority: enumField(['low', 'medium', 'high'] as const)
+      .default('medium'),
+  },
+})
+```
+
+**Generated PostgreSQL schema:**
+```typescript
+import { pgTable, pgEnum } from 'drizzle-orm/pg-core'
+
+export const postStatusEnum = pgEnum('postStatusEnum', ['draft', 'published', 'archived'])
+
+export const posts = pgTable('posts', {
+  status: postStatusEnum('status').notNull().default('draft'),
+})
+```
+
+**Generated Zod schema:**
+```typescript
+export const postCreateSchema = z.object({
+  status: z.enum(['draft', 'published', 'archived']),
+})
+```
+
+### CRUD Hooks
+
+**Status:** ✅ Implemented
+
+**Why needed:** Business logic before/after CRUD (e.g., send email after user created, validate stock before order, audit log on delete). Without this, developers must manually edit generated code.
+
+**Implementation:** Added `hooks` config per entity with `beforeCreate`, `afterCreate`, `beforeUpdate`, `afterUpdate`, `beforeRemove`, `afterRemove`. Hooks are invoked in generated tRPC routers.
+
+**Usage:**
+```typescript
+const Order = defineEntity('Order', {
+  fields: {
+    total: number().required(),
+    status: enumField(['pending', 'paid', 'shipped'] as const),
+  },
+  hooks: true,  // Enable all hooks
+  // Or granular: hooks: { beforeCreate: true, afterCreate: true }
+})
+```
+
+**Generated files:**
+- `generated/hooks/types.ts` - Type definitions for all hook signatures
+- `generated/hooks/{entity}.ts` - Hook implementation stubs (user-editable)
+
+**Hook implementation:**
+```typescript
+// generated/hooks/order.ts (edit this file)
+import type { OrderHooks, HookContext, OrderCreateInput, OrderRecord } from './types'
+
+export const orderHooks: OrderHooks = {
+  async beforeCreate(input, ctx) {
+    // Validate business rules, modify input
+    // throw new Error('message') to abort
+    return input
+  },
+
+  async afterCreate(record, ctx) {
+    // Side effects: send email, audit log
+    await sendOrderConfirmation(record, ctx.user)
+  },
+
+  async beforeRemove(id, ctx) {
+    // Prevent deletion if order is shipped
+    const order = await getOrder(id)
+    if (order.status === 'shipped') {
+      throw new Error('Cannot delete shipped orders')
+    }
+  },
+}
+```
+
+**Hook context:**
+```typescript
+interface HookContext {
+  user?: { id: string; email?: string; name?: string }
+  headers?: Record<string, string>
+}
+```
+
+## Not In Scope
+
+These are **runtime concerns** that belong in your application, not the code generator:
+
+| Concern | Why Not In Engine | Recommendation |
+|---------|-------------------|----------------|
+| **File Uploads** | Runtime service, needs S3/storage | Use [uploadthing](https://uploadthing.com) or presigned URLs |
+| **Multi-Site Routing** | Deployment/middleware concern | Implement as Next.js middleware |
+| **API Versioning** | Routing concern | Handle via route structure (`/api/v1/...`) |
+| **Background Jobs** | Runtime infrastructure | Use [Trigger.dev](https://trigger.dev) or BullMQ |
+| **Email/Notifications** | External service | Use [Resend](https://resend.com) or similar |
+| **Payments** | External service | Use Stripe, PayPal SDK directly |
+
+The engine generates **static code** from entity definitions. It runs at build time, not runtime. Features requiring runtime services belong in your application code.

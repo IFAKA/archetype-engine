@@ -1,4 +1,23 @@
-// Service layer generator for external API entities
+/**
+ * Service Layer Generator
+ *
+ * Generates service modules for entities backed by external APIs.
+ * Only runs when entities have external source configuration.
+ *
+ * Generated files:
+ * - services/apiClient.ts - Reusable HTTP client with typed methods
+ * - services/{entity}Service.ts - CRUD operations for each external entity
+ * - services/index.ts - Barrel export of all services
+ *
+ * Features:
+ * - Environment variable support for base URLs (env:VARIABLE_NAME syntax)
+ * - RESTful endpoint pattern support (GET /products/:id)
+ * - Typed request/response handling
+ * - Error handling with HTTP status codes
+ * - AbortSignal support for request cancellation
+ *
+ * @module generators/service
+ */
 
 import type { Generator, GeneratedFile } from '../../../template/types'
 import type { GeneratorContext } from '../../../template/context'
@@ -7,7 +26,13 @@ import type { EntityIR } from '../../../entity'
 import { resolveEndpoints, ExternalSourceConfig } from '../../../source'
 
 /**
- * Parse environment variable syntax: 'env:VARIABLE_NAME' -> process.env.VARIABLE_NAME
+ * Parse environment variable syntax in base URL
+ *
+ * Converts 'env:VARIABLE_NAME' to 'process.env.VARIABLE_NAME' for runtime resolution.
+ * Regular URLs are returned as string literals.
+ *
+ * @param baseUrl - Base URL string, may contain env: prefix
+ * @returns JavaScript expression for the URL
  */
 function parseEnvUrl(baseUrl: string): string {
   if (baseUrl.startsWith('env:')) {
@@ -18,8 +43,14 @@ function parseEnvUrl(baseUrl: string): string {
 }
 
 /**
- * Parse endpoint string into method and path
- * e.g., 'GET /products/:id' -> { method: 'GET', path: '/products/:id' }
+ * Parse endpoint string into HTTP method and path
+ *
+ * @example
+ * parseEndpoint('GET /products/:id') // { method: 'GET', path: '/products/:id' }
+ * parseEndpoint('/products')         // { method: 'GET', path: '/products' }
+ *
+ * @param endpoint - Endpoint string with optional method prefix
+ * @returns Object with method and path
  */
 function parseEndpoint(endpoint: string): { method: string; path: string } {
   const parts = endpoint.split(' ')
@@ -31,7 +62,12 @@ function parseEndpoint(endpoint: string): { method: string; path: string } {
 }
 
 /**
- * Generate the base API client code
+ * Generate the shared API client module
+ *
+ * Creates a reusable HTTP client with typed methods for GET, POST, PUT, DELETE.
+ * Includes URL building with query parameters and error handling.
+ *
+ * @returns Generated file for apiClient.ts
  */
 function generateApiClient(): GeneratedFile {
   return {
@@ -135,7 +171,12 @@ export const apiClient = new ApiClient()
 }
 
 /**
- * Generate service for an entity with external source
+ * Generate service module for a single entity with external API source
+ *
+ * @param entity - Entity IR with source configuration
+ * @param source - External source config with base URL and endpoints
+ * @param ctx - Generator context
+ * @returns Generated file for {entity}Service.ts
  */
 function generateEntityService(
   entity: EntityIR,
@@ -227,7 +268,10 @@ export interface ${name} extends ${name}Create {
 }
 
 /**
- * Generate service index file
+ * Generate barrel export file for all services
+ *
+ * @param entities - Entities with external source to include
+ * @returns Generated file for services/index.ts
  */
 function generateServiceIndex(entities: EntityIR[]): GeneratedFile {
   const externalEntities = entities.filter(e => e.source?.type === 'external')

@@ -1,4 +1,21 @@
-// Zod schema generator with i18n support
+/**
+ * Zod Validation Schema Generator
+ *
+ * Generates Zod validation schemas for entity CRUD operations.
+ * Supports internationalized error messages via next-intl.
+ *
+ * Generated files:
+ * - schemas/{entity}.ts - Create and Update schemas with types
+ *
+ * Features:
+ * - Maps field types to Zod validators (z.string(), z.number(), etc.)
+ * - Generates validation rules from field config (min, max, email, url, regex)
+ * - Supports i18n error messages when multiple languages configured
+ * - Creates both static and i18n-aware schema factory functions
+ * - Exports TypeScript types derived from schemas
+ *
+ * @module generators/validation
+ */
 
 import type { Generator, GeneratedFile } from '../../../template/types'
 import type { GeneratorContext } from '../../../template/context'
@@ -6,6 +23,14 @@ import type { ManifestIR } from '../../../manifest'
 import type { EntityIR } from '../../../entity'
 import type { FieldConfig, Validation } from '../../../fields'
 
+/**
+ * Generate Zod schema chain for a single field
+ *
+ * @param fieldName - Field name for error messages
+ * @param config - Field configuration with type and validations
+ * @param useI18n - Whether to use i18n translation function for messages
+ * @returns Zod schema chain as string (e.g., "z.string().email().min(1)")
+ */
 function generateFieldSchema(
   fieldName: string,
   config: FieldConfig,
@@ -14,7 +39,25 @@ function generateFieldSchema(
   const parts: string[] = []
   const label = config.label || fieldName
 
-  // Base type
+  // Base type - handle enum fields specially with z.enum()
+  if (config.type === 'enum' && config.enumValues) {
+    const values = config.enumValues.map(v => `'${v}'`).join(', ')
+    parts.push(`z.enum([${values}])`)
+
+    // Optional (must come after base type)
+    if (!config.required) {
+      parts.push('.optional()')
+    }
+
+    // Default (must come after optional)
+    if (config.default !== undefined && !config.required) {
+      parts.push(`.default('${config.default}')`)
+    }
+
+    return parts.join('')
+  }
+
+  // Regular field types
   switch (config.type) {
     case 'text': parts.push('z.string()'); break
     case 'number': parts.push('z.number()'); break
@@ -53,6 +96,14 @@ function generateFieldSchema(
   return parts.join('')
 }
 
+/**
+ * Generate Zod validation method for a specific validation rule
+ *
+ * @param v - Validation rule from field config
+ * @param label - Field label for error messages
+ * @param useI18n - Whether to use i18n translation function
+ * @returns Zod method call as string (e.g., ".min(5, { message: ... })")
+ */
 function generateValidation(v: Validation, label: string, useI18n: boolean): string {
   const msg = (key: string, params: Record<string, unknown> = {}) => {
     if (useI18n) {
@@ -101,12 +152,23 @@ function generateValidation(v: Validation, label: string, useI18n: boolean): str
   }
 }
 
+/**
+ * Generate complete validation schema file for an entity
+ *
+ * Creates both static schemas and i18n-aware factory functions when i18n is enabled.
+ *
+ * @param entity - Entity IR with fields and relations
+ * @param useI18n - Whether to generate i18n-aware schema factories
+ * @returns Complete schema file content as string
+ */
 function generateEntitySchema(entity: EntityIR, useI18n: boolean): string {
   const name = entity.name
   const lowerName = name.toLowerCase()
 
   const staticFields: string[] = []
   for (const [fieldName, config] of Object.entries(entity.fields)) {
+    // Skip computed fields - they're derived at runtime, not user input
+    if (config.type === 'computed') continue
     staticFields.push(`    ${fieldName}: ${generateFieldSchema(fieldName, config, false)},`)
   }
 
@@ -120,6 +182,8 @@ function generateEntitySchema(entity: EntityIR, useI18n: boolean): string {
   if (useI18n) {
     const i18nFields: string[] = []
     for (const [fieldName, config] of Object.entries(entity.fields)) {
+      // Skip computed fields - they're derived at runtime, not user input
+      if (config.type === 'computed') continue
       i18nFields.push(`    ${fieldName}: ${generateFieldSchema(fieldName, config, true)},`)
     }
     for (const [relName, rel] of Object.entries(entity.relations)) {

@@ -70,6 +70,14 @@ export interface EntityDefinition {
    * If not specified, inherits from manifest.source or uses database.
    */
   source?: ExternalSourceConfig
+  /**
+   * CRUD hooks configuration.
+   * Enable specific hooks or use `true` to enable all hooks.
+   * @example
+   * hooks: true  // Enable all hooks
+   * hooks: { beforeCreate: true, afterCreate: true }  // Enable specific hooks
+   */
+  hooks?: boolean | HooksConfig
 }
 
 /**
@@ -82,6 +90,39 @@ export interface EntityBehaviors {
   audit?: boolean
   /** Add `createdAt` and `updatedAt` timestamps (default: true) */
   timestamps?: boolean
+}
+
+/**
+ * CRUD hook configuration - enables hook points in generated routers
+ *
+ * When enabled, hooks are invoked at the appropriate points in CRUD operations.
+ * Hook implementations are defined in user-managed files (hooks/{entity}.ts).
+ */
+export interface HooksConfig {
+  /** Called before creating a record. Can modify input or throw to abort. */
+  beforeCreate?: boolean
+  /** Called after a record is created. For side effects (email, audit, etc). */
+  afterCreate?: boolean
+  /** Called before updating a record. Can modify input or throw to abort. */
+  beforeUpdate?: boolean
+  /** Called after a record is updated. For side effects. */
+  afterUpdate?: boolean
+  /** Called before removing a record. Can throw to abort. */
+  beforeRemove?: boolean
+  /** Called after a record is removed. For cleanup/archival. */
+  afterRemove?: boolean
+}
+
+/**
+ * Normalized hooks config (all boolean values)
+ */
+export interface HooksIR {
+  beforeCreate: boolean
+  afterCreate: boolean
+  beforeUpdate: boolean
+  afterUpdate: boolean
+  beforeRemove: boolean
+  afterRemove: boolean
 }
 
 /**
@@ -102,6 +143,8 @@ export interface EntityIR {
   protected: ProtectedIR
   /** External API source (optional - inherits from manifest if not specified) */
   source?: ExternalSourceConfig
+  /** Normalized hooks config */
+  hooks: HooksIR
 }
 
 /**
@@ -118,6 +161,34 @@ function normalizeProtected(option?: ProtectedOption): ProtectedIR {
 
   // Granular config - merge with allPublic defaults
   return { ...allPublic, ...option }
+}
+
+/**
+ * Normalize hooks option to granular config
+ */
+function normalizeHooks(option?: boolean | HooksConfig): HooksIR {
+  const noHooks: HooksIR = {
+    beforeCreate: false,
+    afterCreate: false,
+    beforeUpdate: false,
+    afterUpdate: false,
+    beforeRemove: false,
+    afterRemove: false,
+  }
+  const allHooks: HooksIR = {
+    beforeCreate: true,
+    afterCreate: true,
+    beforeUpdate: true,
+    afterUpdate: true,
+    beforeRemove: true,
+    afterRemove: true,
+  }
+
+  if (option === undefined || option === false) return noHooks
+  if (option === true) return allHooks
+
+  // Granular config - merge with noHooks defaults
+  return { ...noHooks, ...option }
 }
 
 // Compile entity definition to IR
@@ -149,6 +220,7 @@ function compileEntity(name: string, definition: EntityDefinition): EntityIR {
     auth: definition.auth || false,
     protected: normalizeProtected(definition.protected),
     source: definition.source,
+    hooks: normalizeHooks(definition.hooks),
   }
 }
 

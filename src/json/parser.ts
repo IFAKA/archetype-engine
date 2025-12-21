@@ -6,7 +6,7 @@
 
 import { FieldConfig, Validation } from '../fields'
 import { RelationConfig } from '../relations'
-import { EntityIR, ProtectedIR, EntityBehaviors } from '../entity'
+import { EntityIR, ProtectedIR, EntityBehaviors, HooksIR } from '../entity'
 import { ManifestIR, ModeConfig, normalizeMode } from '../manifest'
 import { ExternalSourceConfig } from '../source'
 import {
@@ -16,6 +16,7 @@ import {
   ManifestJSON,
   ExternalSourceJSON,
   ProtectedJSON,
+  HooksJSON,
 } from './types'
 
 /**
@@ -125,6 +126,34 @@ export function parseProtectedJSON(option?: ProtectedJSON): ProtectedIR {
 }
 
 /**
+ * Parse a JSON hooks option to HooksIR
+ */
+export function parseHooksJSON(option?: boolean | HooksJSON): HooksIR {
+  const noHooks: HooksIR = {
+    beforeCreate: false,
+    afterCreate: false,
+    beforeUpdate: false,
+    afterUpdate: false,
+    beforeRemove: false,
+    afterRemove: false,
+  }
+  const allHooks: HooksIR = {
+    beforeCreate: true,
+    afterCreate: true,
+    beforeUpdate: true,
+    afterUpdate: true,
+    beforeRemove: true,
+    afterRemove: true,
+  }
+
+  if (option === undefined || option === false) return noHooks
+  if (option === true) return allHooks
+
+  // Granular config - merge with noHooks defaults
+  return { ...noHooks, ...option }
+}
+
+/**
  * Parse a JSON entity definition to EntityIR
  */
 export function parseEntityJSON(entity: EntityJSON): EntityIR {
@@ -163,6 +192,7 @@ export function parseEntityJSON(entity: EntityJSON): EntityIR {
     auth: entity.auth || false,
     protected: parseProtectedJSON(entity.protected),
     source,
+    hooks: parseHooksJSON(entity.hooks),
   }
 }
 

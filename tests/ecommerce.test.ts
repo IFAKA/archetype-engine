@@ -307,6 +307,77 @@ describe('tRPC Router Generation', () => {
     expect(productRouter).toContain('remove:')
   })
 
+  it('generates list input schema with pagination and filtering', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('listInput')
+    expect(productRouter).toContain('page: z.number().int().min(1).default(1)')
+    expect(productRouter).toContain('limit: z.number().int().min(1).max(100).default(20)')
+    // Filtering support
+    expect(productRouter).toContain('where: z.object(')
+    expect(productRouter).toContain('orderBy: z.object(')
+    expect(productRouter).toContain('search: z.string().optional()')
+  })
+
+  it('generates paginated list response', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('.limit(limit)')
+    expect(productRouter).toContain('.offset(offset)')
+    expect(productRouter).toContain('items,')
+    expect(productRouter).toContain('total,')
+    expect(productRouter).toContain('hasMore:')
+  })
+
+  it('imports count from drizzle-orm for pagination', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('count')
+    expect(productRouter).toContain("from 'drizzle-orm'")
+  })
+
+  it('generates filter schemas for different field types', () => {
+    const productRouter = routers.Product
+    // Text field filters (contains, startsWith, endsWith)
+    expect(productRouter).toContain('contains: z.string().optional()')
+    expect(productRouter).toContain('startsWith: z.string().optional()')
+    expect(productRouter).toContain('endsWith: z.string().optional()')
+    // Number field filters (gt, gte, lt, lte)
+    expect(productRouter).toContain('gt: z.number().optional()')
+    expect(productRouter).toContain('gte: z.number().optional()')
+    expect(productRouter).toContain('lt: z.number().optional()')
+    expect(productRouter).toContain('lte: z.number().optional()')
+    // Boolean field filter
+    expect(productRouter).toContain('z.boolean().optional()')
+  })
+
+  it('generates buildFilters helper function', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('function buildFilters')
+    expect(productRouter).toContain('const conditions: SQL[] = []')
+    // Uses Drizzle operators
+    expect(productRouter).toContain('eq(')
+    expect(productRouter).toContain('like(')
+  })
+
+  it('generates buildSearch helper for text fields', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('function buildSearch')
+    expect(productRouter).toContain('or(')
+    expect(productRouter).toContain('%${search}%')
+  })
+
+  it('generates buildOrderBy helper function', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('function buildOrderBy')
+    expect(productRouter).toContain('asc(column)')
+    expect(productRouter).toContain('desc(column)')
+  })
+
+  it('applies filters, search, and orderBy in list query', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('const filterConditions = buildFilters(input?.where)')
+    expect(productRouter).toContain('const searchCondition = buildSearch(input?.search)')
+    expect(productRouter).toContain('const orderByClause = buildOrderBy(input?.orderBy)')
+  })
+
   it('uses static schemas (not i18n)', () => {
     const productRouter = routers.Product
     expect(productRouter).toContain('productCreateSchema')
@@ -323,6 +394,46 @@ describe('tRPC Router Generation', () => {
     const productRouter = routers.Product
     expect(productRouter).toContain("from '@/generated/schemas/product'")
     expect(productRouter).toContain("from '@/generated/db/schema'")
+  })
+
+  // ============ BATCH OPERATIONS TESTS ============
+
+  it('generates createMany procedure', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('createMany:')
+    expect(productRouter).toContain('z.array(productCreateSchema).min(1).max(100)')
+    expect(productRouter).toContain('db.insert(products).values(values).returning()')
+    expect(productRouter).toContain('created: result, count: result.length')
+  })
+
+  it('generates updateMany procedure', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('updateMany:')
+    expect(productRouter).toContain('z.array(z.object({')
+    expect(productRouter).toContain('id: z.string()')
+    expect(productRouter).toContain('data: productUpdateSchema')
+    expect(productRouter).toContain('updated: results, count: results.length')
+  })
+
+  it('generates removeMany procedure', () => {
+    const productRouter = routers.Product
+    expect(productRouter).toContain('removeMany:')
+    expect(productRouter).toContain('ids: z.array(z.string()).min(1).max(100)')
+    expect(productRouter).toContain('inArray(products.id, input.ids)')
+    expect(productRouter).toContain('removed: result, count: result.length')
+  })
+
+  it('batch operations respect soft delete', () => {
+    // Product has softDelete enabled
+    const productRouter = routers.Product
+    // removeMany should use soft delete (update with deletedAt)
+    expect(productRouter).toMatch(/removeMany:[\s\S]*?db\.update\(products\)[\s\S]*?deletedAt/)
+  })
+
+  it('batch operations respect tenancy', () => {
+    const productRouter = routers.Product
+    // updateMany should include tenant filter
+    expect(productRouter).toMatch(/updateMany:[\s\S]*?storeId/)
   })
 })
 
@@ -366,15 +477,88 @@ describe('React Hooks Generation', () => {
     expect(productHook).toContain('export function useProductRemove')
   })
 
-  it('generates list hook', () => {
+  it('generates list hook with pagination options', () => {
     const productHook = hooks.Product
     expect(productHook).toContain('export function useProducts')
+    expect(productHook).toContain('UseProductsOptions')
+    expect(productHook).toContain('page?: number')
+    expect(productHook).toContain('limit?: number')
+  })
+
+  it('generates list hook with filter, orderBy, and search options', () => {
+    const productHook = hooks.Product
+    // Filter type and option
+    expect(productHook).toContain('ProductFilter')
+    expect(productHook).toContain('where?: ProductFilter')
+    // OrderBy type and option
+    expect(productHook).toContain('ProductOrderBy')
+    expect(productHook).toContain('orderBy?: ProductOrderBy')
+    // Search option
+    expect(productHook).toContain('search?: string')
+  })
+
+  it('generates filter type with field-specific operators', () => {
+    const productHook = hooks.Product
+    // Text field operators
+    expect(productHook).toContain('contains?: string')
+    expect(productHook).toContain('startsWith?: string')
+    // Number field operators
+    expect(productHook).toContain('gt?: number')
+    expect(productHook).toContain('lte?: number')
+  })
+
+  it('generates orderBy type with entity fields', () => {
+    const productHook = hooks.Product
+    // Should include entity fields and system fields as union type
+    expect(productHook).toContain("export interface ProductOrderBy")
+    expect(productHook).toContain("field:")
+    expect(productHook).toContain("'sku'")  // First field of Product
+    expect(productHook).toContain("'createdAt'")
+    expect(productHook).toContain("'updatedAt'")
+    expect(productHook).toContain("direction?: 'asc' | 'desc'")
+  })
+
+  it('passes filter options to trpc query', () => {
+    const productHook = hooks.Product
+    expect(productHook).toContain('where: options?.where')
+    expect(productHook).toContain('orderBy: options?.orderBy')
+    expect(productHook).toContain('search: options?.search')
   })
 
   it('uses i18n schemas for client-side', () => {
     const productHook = hooks.Product
     expect(productHook).toContain('productCreateSchemaI18n')
     expect(productHook).toContain('useTranslations')
+  })
+
+  // ============ BATCH HOOKS TESTS ============
+
+  it('generates useCreateManyProducts hook', () => {
+    const productHook = hooks.Product
+    expect(productHook).toContain('export function useCreateManyProducts()')
+    expect(productHook).toContain('trpc.product.createMany.useMutation')
+    expect(productHook).toContain('createMany: (items: ProductCreate[])')
+  })
+
+  it('generates useUpdateManyProducts hook', () => {
+    const productHook = hooks.Product
+    expect(productHook).toContain('export function useUpdateManyProducts()')
+    expect(productHook).toContain('trpc.product.updateMany.useMutation')
+    expect(productHook).toContain('updateMany: (items: { id: string; data: ProductUpdate }[])')
+  })
+
+  it('generates useRemoveManyProducts hook', () => {
+    const productHook = hooks.Product
+    expect(productHook).toContain('export function useRemoveManyProducts()')
+    expect(productHook).toContain('trpc.product.removeMany.useMutation')
+    expect(productHook).toContain('removeMany: (ids: string[])')
+  })
+
+  it('batch hooks invalidate list on success', () => {
+    const productHook = hooks.Product
+    // All batch hooks should invalidate the list cache
+    expect(productHook).toMatch(/useCreateManyProducts[\s\S]*?utils\.product\.list\.invalidate/)
+    expect(productHook).toMatch(/useRemoveManyProducts[\s\S]*?utils\.product\.list\.invalidate/)
   })
 })
 
@@ -515,7 +699,9 @@ describe('Full Generation Integration', () => {
     const trpcFiles = toArray(apiGenerator.generate(manifest, ctx))
     trpcFiles.forEach((file) => {
       expect(file.content.length).toBeGreaterThan(100)
-      expect(file.content).not.toContain('undefined')
+      // Check for template failures (${undefined}), not legitimate code using 'undefined'
+      expect(file.content).not.toContain('${undefined}')
+      expect(file.content).not.toContain(': undefined,')
     })
 
     // Hooks

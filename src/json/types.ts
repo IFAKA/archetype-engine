@@ -173,6 +173,21 @@ export interface EntityJSON {
 
   /** External API source (overrides manifest source) */
   source?: ExternalSourceJSON
+
+  /** CRUD hooks configuration */
+  hooks?: boolean | HooksJSON
+}
+
+/**
+ * Hooks configuration for JSON input
+ */
+export interface HooksJSON {
+  beforeCreate?: boolean
+  afterCreate?: boolean
+  beforeUpdate?: boolean
+  afterUpdate?: boolean
+  beforeRemove?: boolean
+  afterRemove?: boolean
 }
 
 // ============ MANIFEST TYPES ============

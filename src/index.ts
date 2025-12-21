@@ -1,13 +1,16 @@
 // Core exports
 
 // Field builders
-export { text, number, boolean, date } from './fields'
+export { text, number, boolean, date, enumField, computed } from './fields'
 export type {
   FieldBuilder,
   TextFieldBuilder,
   NumberFieldBuilder,
   BooleanFieldBuilder,
   DateFieldBuilder,
+  EnumFieldBuilder,
+  ComputedFieldBuilder,
+  ComputedOptions,
   FieldConfig,
   Validation,
 } from './fields'
@@ -26,6 +29,8 @@ export type {
   ProtectedConfig,
   ProtectedOption,
   ProtectedIR,
+  HooksConfig,
+  HooksIR,
 } from './entity'
 
 // Manifest definition

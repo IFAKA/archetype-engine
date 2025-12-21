@@ -13,12 +13,22 @@ export interface Validation {
 }
 
 export interface FieldConfig {
-  type: 'text' | 'number' | 'boolean' | 'date'
+  type: 'text' | 'number' | 'boolean' | 'date' | 'computed' | 'enum'
   required: boolean
   unique: boolean
   default?: unknown
   label?: string
   validations: Validation[]
+  /** For computed fields: the return type */
+  returnType?: 'text' | 'number' | 'boolean' | 'date'
+  /** For computed fields: source fields used in computation */
+  sourceFields?: string[]
+  /** For computed fields: the computation expression */
+  expression?: string
+  /** For enum fields: the allowed values */
+  enumValues?: readonly string[]
+  /** For enum fields: custom enum type name (optional) */
+  enumName?: string
 }
 
 // Base builder interface - generic to preserve type through chain
@@ -59,8 +69,19 @@ export interface DateFieldBuilder extends BaseFieldBuilder<DateFieldBuilder> {
   default(value: 'now' | Date): DateFieldBuilder
 }
 
+export interface EnumFieldBuilder<T extends readonly string[]> extends BaseFieldBuilder<EnumFieldBuilder<T>> {
+  /** Set the default value (must be one of the enum values) */
+  default(value: T[number]): EnumFieldBuilder<T>
+}
+
+export interface ComputedFieldBuilder {
+  readonly _config: FieldConfig
+  /** Set a label for the field */
+  label(value: string): ComputedFieldBuilder
+}
+
 // Union type for any field builder
-export type FieldBuilder = TextFieldBuilder | NumberFieldBuilder | BooleanFieldBuilder | DateFieldBuilder
+export type FieldBuilder = TextFieldBuilder | NumberFieldBuilder | BooleanFieldBuilder | DateFieldBuilder | EnumFieldBuilder<readonly string[]> | ComputedFieldBuilder
 
 // Builder implementations
 function createTextFieldBuilder(config: FieldConfig): TextFieldBuilder {
@@ -159,6 +180,17 @@ function createDateFieldBuilder(config: FieldConfig): DateFieldBuilder {
   }
 }
 
+function createEnumFieldBuilder<T extends readonly string[]>(config: FieldConfig): EnumFieldBuilder<T> {
+  return {
+    _config: config,
+    required: () => createEnumFieldBuilder({ ...config, required: true }),
+    optional: () => createEnumFieldBuilder({ ...config, required: false }),
+    unique: () => createEnumFieldBuilder({ ...config, unique: true }),
+    default: (value: T[number]) => createEnumFieldBuilder({ ...config, default: value }),
+    label: (value: string) => createEnumFieldBuilder({ ...config, label: value }),
+  }
+}
+
 /**
  * Create a text field builder
  *
@@ -243,5 +275,111 @@ export function date(): DateFieldBuilder {
     required: false,
     unique: false,
     validations: []
+  })
+}
+
+/**
+ * Create an enum field builder with type-safe values
+ *
+ * Enum fields create native database enum types (PostgreSQL) or
+ * CHECK constraints (SQLite/MySQL) and generate proper Zod enums.
+ *
+ * @param values - Array of allowed string values (use `as const` for type safety)
+ * @returns EnumFieldBuilder with chainable methods
+ *
+ * @example
+ * ```typescript
+ * // Basic enum
+ * status: enumField(['draft', 'published', 'archived'])
+ *
+ * // With type safety (recommended)
+ * status: enumField(['draft', 'published', 'archived'] as const)
+ *   .required()
+ *   .default('draft')
+ *
+ * // Order status with default
+ * orderStatus: enumField(['pending', 'processing', 'shipped', 'delivered'] as const)
+ *   .required()
+ *   .default('pending')
+ * ```
+ */
+export function enumField<T extends readonly string[]>(values: T): EnumFieldBuilder<T> {
+  return createEnumFieldBuilder({
+    type: 'enum',
+    required: false,
+    unique: false,
+    validations: [],
+    enumValues: values,
+  })
+}
+
+function createComputedFieldBuilder(config: FieldConfig): ComputedFieldBuilder {
+  return {
+    _config: config,
+    label: (value: string) => createComputedFieldBuilder({ ...config, label: value }),
+  }
+}
+
+/**
+ * Computed field configuration
+ */
+export interface ComputedOptions {
+  /** The return type of the computed field */
+  type: 'text' | 'number' | 'boolean' | 'date'
+  /** Source fields used in the computation */
+  from: string[]
+  /**
+   * The computation expression. Use field names as variables.
+   *
+   * For text concatenation: `"${firstName} ${lastName}"`
+   * For math: `"price * quantity"`
+   * For conditionals: `"stock > 0 ? 'In Stock' : 'Out of Stock'"`
+   */
+  get: string
+}
+
+/**
+ * Create a computed/virtual field
+ *
+ * Computed fields are derived from other fields at runtime.
+ * They are included in API responses but excluded from create/update inputs.
+ * They are NOT stored in the database.
+ *
+ * @param options - Configuration for the computed field
+ * @returns ComputedFieldBuilder
+ *
+ * @example
+ * ```typescript
+ * // Full name from first + last
+ * fullName: computed({
+ *   type: 'text',
+ *   from: ['firstName', 'lastName'],
+ *   get: '`${firstName} ${lastName}`'
+ * })
+ *
+ * // Total price
+ * totalPrice: computed({
+ *   type: 'number',
+ *   from: ['price', 'quantity'],
+ *   get: 'price * quantity'
+ * })
+ *
+ * // Stock status
+ * inStock: computed({
+ *   type: 'boolean',
+ *   from: ['quantity'],
+ *   get: 'quantity > 0'
+ * })
+ * ```
+ */
+export function computed(options: ComputedOptions): ComputedFieldBuilder {
+  return createComputedFieldBuilder({
+    type: 'computed',
+    returnType: options.type,
+    sourceFields: options.from,
+    expression: options.get,
+    required: false,
+    unique: false,
+    validations: [],
   })
 }

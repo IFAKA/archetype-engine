@@ -145,6 +145,19 @@ boolean().default(false)
 // date
 date().optional()
 date().default('now')             // current timestamp
+
+// enum (native DB enums for PostgreSQL, text for SQLite)
+enumField(['draft', 'published', 'archived'] as const)
+enumField(['low', 'medium', 'high'] as const)
+  .required()
+  .default('medium')
+
+// computed (virtual fields, not stored in DB)
+computed({
+  type: 'text',                   // return type: 'text' | 'number' | 'boolean' | 'date'
+  from: ['firstName', 'lastName'], // source fields
+  get: '`${firstName} ${lastName}`' // JS expression
+})
 ```
 
 ## Relations
@@ -385,6 +398,36 @@ export const Product = defineEntity('Product', {
   source: external('env:CATALOG_API', { pathPrefix: '/v2' })
 })
 ```
+
+## Roadmap
+
+Features planned for the engine (code generation):
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Pagination** | ✅ | `{ items, total, hasMore }` with `page`/`limit` inputs |
+| **Search & Filtering** | ✅ | `where`, `orderBy`, `search` parameters |
+| **Batch Operations** | ✅ | `createMany`, `updateMany`, `removeMany` procedures |
+| **Pivot Data on Relations** | ✅ | Many-to-many with extra fields via `.through()` |
+| **Computed Fields** | ✅ | Virtual fields derived from others (`fullName` from first + last) |
+| **Database Enums** | ✅ | Native DB enum types with `enumField()` builder |
+| **CRUD Hooks** | 🔴 | Generated hook points (`beforeCreate`, `afterUpdate`) |
+
+See [CLAUDE.md](CLAUDE.md#roadmap-features-to-add) for implementation details.
+
+## Not In Scope
+
+These are **runtime concerns** that belong in your application, not the code generator:
+
+| Concern | Recommendation |
+|---------|----------------|
+| **File Uploads** | Use [uploadthing](https://uploadthing.com) or S3 presigned URLs |
+| **Multi-Site/Multi-Tenant Routing** | Implement as Next.js middleware |
+| **API Versioning** | Handle via route structure (`/api/v1/...`) |
+| **Background Jobs** | Use [Trigger.dev](https://trigger.dev) or BullMQ |
+| **Email/Notifications** | Use [Resend](https://resend.com) or similar |
+
+The engine generates static code from entity definitions. Runtime infrastructure is your app's responsibility.
 
 ## Contributing
 
