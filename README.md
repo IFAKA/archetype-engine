@@ -411,7 +411,7 @@ Features planned for the engine (code generation):
 | **Pivot Data on Relations** | ✅ | Many-to-many with extra fields via `.through()` |
 | **Computed Fields** | ✅ | Virtual fields derived from others (`fullName` from first + last) |
 | **Database Enums** | ✅ | Native DB enum types with `enumField()` builder |
-| **CRUD Hooks** | 🔴 | Generated hook points (`beforeCreate`, `afterUpdate`) |
+| **CRUD Hooks** | ✅ | Generated hook points (`beforeCreate`, `afterUpdate`) |
 
 See [CLAUDE.md](CLAUDE.md#roadmap-features-to-add) for implementation details.
 
