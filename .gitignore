@@ -42,3 +42,9 @@ docs/
 
 # Generated assets (upload externally)
 banner.png
+
+# Private/Company-specific documentation (keep local only)
+documentation/SFRA_*.md
+MIGRATION_ASSESSMENT.md
+examples/kiwoko-migration/
+examples/*-migration/
