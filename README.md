@@ -143,6 +143,7 @@ export default function ProductList() {
 ```typescript
 // Text
 text().required().unique().min(5).max(100)
+text().length(2)            // Exact length (e.g., country code)
 text().email()              // Email validation
 text().url()                // URL validation
 text().lowercase()          // Transform on save
@@ -178,12 +179,15 @@ computed({
 const Post = defineEntity('Post', {
   fields: { title: text() },
   relations: {
-    author: hasOne('User'),              // Creates authorId FK
-    comments: hasMany('Comment'),        // One-to-many
-    tags: belongsToMany('Tag'),          // Many-to-many (junction table)
+    author: hasOne('User'),                    // Creates authorId FK (required)
+    category: hasOne('Category').optional(),   // Creates categoryId FK (nullable)
+    comments: hasMany('Comment'),              // One-to-many
+    tags: belongsToMany('Tag'),                // Many-to-many (junction table)
   }
 })
 ```
+
+**Optional relations** (`.optional()`) allow nullable foreign keys - useful for guest checkout (Cart without Customer), uncategorized products, etc.
 
 **Pivot data** (extra fields on junction tables):
 ```typescript
@@ -391,13 +395,23 @@ See [AI Integration Guide](documentation/AI_INTEGRATION.md).
 
 ---
 
-## Real Example: 15-Entity E-commerce
+## Real Examples
 
+### Simple E-commerce (15 entities)
 See [`examples/ecommerce/`](examples/ecommerce/):
 - Customer, Address, Product, Category, Brand, Tag
 - Order, OrderItem, Payment, Cart, Review
 
 **~60 lines of entities → 5,000+ lines generated** (schema, validation, API, hooks, i18n).
+
+### Enterprise SFRA Migration (17 entities)
+Real-world Salesforce Commerce Cloud migration example:
+- Product, Category, Customer, Address, Order, OrderItem
+- Cart, CartItem, Payment, Shipment, ShippingMethod
+- Store, ProductImage, ProductVariant, Review
+- PaymentInstrument, WishlistItem
+
+Includes SFRA-specific fields (product dimensions, delivery promises, GTM tracking).
 
 ---
 

@@ -231,6 +231,23 @@ function mapFieldType(config: FieldConfig, isSqlite: boolean): string {
 export { text, number, boolean, date, json } from './fields'
 ```
 
+## Recent Features Added
+
+### `.length()` for Text Fields (Dec 2024)
+Exact-length validation for fields like country codes, card numbers:
+```typescript
+countryCode: text().required().length(2)  // Exactly 2 characters
+```
+Internally adds both `minLength` and `maxLength` validations.
+
+### `.optional()` for Relations (Dec 2024)
+Nullable foreign keys for optional relationships:
+```typescript
+customer: hasOne('Customer').optional()  // Guest checkout support
+parent: hasOne('Category').optional()    // Top-level categories
+```
+The schema generator respects this by NOT adding `.notNull()` to the FK column.
+
 ### Step 7: Add tests
 
 Create tests in `tests/fields.test.ts`:

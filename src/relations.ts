@@ -22,6 +22,8 @@ export interface RelationConfig {
   entity: string
   /** Optional custom foreign key field name */
   field?: string
+  /** Whether the relation is optional (for hasOne relations) */
+  optional?: boolean
   /** Pivot table configuration for belongsToMany */
   pivot?: PivotConfig
 }
@@ -30,6 +32,8 @@ export interface RelationBuilder {
   readonly _config: RelationConfig
   /** Override the default foreign key field name */
   field(name: string): RelationBuilder
+  /** Mark this relation as optional (foreign key can be null) */
+  optional(): RelationBuilder
 }
 
 export interface BelongsToManyBuilder extends RelationBuilder {
@@ -41,6 +45,7 @@ function createRelationBuilder(config: RelationConfig): RelationBuilder {
   return {
     _config: config,
     field: (name: string) => createRelationBuilder({ ...config, field: name }),
+    optional: () => createRelationBuilder({ ...config, optional: true }),
   }
 }
 
@@ -48,6 +53,7 @@ function createBelongsToManyBuilder(config: RelationConfig): BelongsToManyBuilde
   return {
     _config: config,
     field: (name: string) => createBelongsToManyBuilder({ ...config, field: name }),
+    optional: () => createBelongsToManyBuilder({ ...config, optional: true }),
     through: (options: { table?: string; fields: Record<string, FieldBuilder> }) => {
       // Extract field configs from builders
       const fieldConfigs: Record<string, FieldConfig> = {}

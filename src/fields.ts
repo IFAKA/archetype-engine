@@ -45,6 +45,7 @@ export interface BaseFieldBuilder<T> {
 export interface TextFieldBuilder extends BaseFieldBuilder<TextFieldBuilder> {
   min(value: number): TextFieldBuilder
   max(value: number): TextFieldBuilder
+  length(value: number): TextFieldBuilder
   email(): TextFieldBuilder
   url(): TextFieldBuilder
   regex(pattern: RegExp): TextFieldBuilder
@@ -99,6 +100,10 @@ function createTextFieldBuilder(config: FieldConfig): TextFieldBuilder {
     max: (value: number) => createTextFieldBuilder({
       ...config,
       validations: [...config.validations, { type: 'maxLength', value }]
+    }),
+    length: (value: number) => createTextFieldBuilder({
+      ...config,
+      validations: [...config.validations, { type: 'minLength', value }, { type: 'maxLength', value }]
     }),
     email: () => createTextFieldBuilder({
       ...config,

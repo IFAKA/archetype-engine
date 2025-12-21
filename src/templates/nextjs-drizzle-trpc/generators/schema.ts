@@ -151,7 +151,8 @@ function generateEntity(entity: EntityIR, isSqlite: boolean, ctx: GeneratorConte
       const fkField = rel.field || `${relName}Id`
       const fkColumn = ctx.naming.getColumnName(fkField)
       const targetTable = ctx.naming.getTableName(rel.entity)
-      lines.push(`  ${fkField}: text('${fkColumn}').references(() => ${targetTable}.id),`)
+      const notNull = rel.optional ? '' : '.notNull()'
+      lines.push(`  ${fkField}: text('${fkColumn}').references(() => ${targetTable}.id)${notNull},`)
     }
   }
 
