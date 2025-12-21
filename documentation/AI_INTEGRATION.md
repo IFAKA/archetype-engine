@@ -1,31 +1,58 @@
-# AI Integration Guide
+# AI Integration
 
-Use archetype-engine with AI to generate full-stack apps from natural language descriptions.
+**Describe your app. Generate the backend.**
 
-## What Archetype Generates
+```typescript
+import { createManifestBuilder, aiTools } from 'archetype-engine/ai'
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
 
-When you run `npx archetype generate`, archetype creates backend infrastructure:
+const builder = createManifestBuilder()
 
+await generateText({
+  model: openai('gpt-4o'),
+  tools: aiTools.vercel(builder),
+  prompt: 'Create a blog with users and posts',
+  maxSteps: 10
+})
+
+const { files } = await builder.generate()
+// → generated/db/schema.ts, generated/hooks/useUser.ts, ...
 ```
-generated/
-├── db/schema.ts           # Drizzle ORM schema
-├── schemas/*.ts           # Zod validation schemas
-├── trpc/routers/*.ts      # tRPC CRUD endpoints
-├── hooks/use*.ts          # React Query + React Hook Form hooks
-└── erd.md                 # Entity relationship diagram
+
+## Quick Start (CLI)
+
+```bash
+# AI generates JSON manifest
+cat > manifest.json << 'EOF'
+{
+  "entities": [
+    { "name": "User", "fields": { "email": { "type": "text", "email": true } } },
+    { "name": "Post", "fields": { "title": { "type": "text" } },
+      "relations": { "author": { "type": "hasOne", "entity": "User" } } }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" }
+}
+EOF
+
+# Validate
+npx archetype validate manifest.json --json
+# → { "valid": true, "errors": [] }
+
+# Generate
+npx archetype generate manifest.json --json
+# → { "success": true, "files": ["generated/db/schema.ts", ...] }
 ```
 
-**Archetype does NOT generate UI components.** It generates hooks that your UI (or AI-generated UI) can import:
-
-```tsx
-import { useTasks, useTaskForm } from '@/generated/hooks/useTask'
-```
-
----
+**CLI flags for AI:**
+| Flag | Purpose |
+|------|---------|
+| `--json` | Structured JSON output |
+| `--stdin` | Read manifest from stdin |
 
 ## AI Toolkit
 
-The simplest way to use archetype with AI. Import ready-to-use tools for your AI framework.
+Ready-to-use tools for AI frameworks. Import from `archetype-engine/ai`.
 
 ### Vercel AI SDK
 
@@ -38,28 +65,39 @@ const builder = createManifestBuilder()
 
 const result = await generateText({
   model: openai('gpt-4o'),
-  tools: aiTools.vercel(builder),
+  tools: aiTools.vercel(builder),  // Tools with Zod schemas
   system: 'You are an app builder. Use the tools to build what the user describes.',
-  prompt: 'Create a blog with users and posts',
+  prompt: userInput,
   maxSteps: 10
 })
 
-// Validate and generate
+// Validate before generating
 const validation = builder.validate()
 if (!validation.valid) {
   console.error(validation.errors)
-} else {
-  const { files, success } = await builder.generate()
+  return
 }
+
+// Generate all files
+const { files, success } = await builder.generate()
 ```
 
-### Available Adapters
+### OpenAI / Anthropic
 
-| Adapter | Usage |
-|---------|-------|
-| `aiTools.vercel(builder)` | Vercel AI SDK - returns tools with Zod schemas |
-| `aiTools.openai()` | OpenAI function calling format |
-| `aiTools.anthropic()` | Anthropic tool use format |
+```typescript
+import { aiTools, createManifestBuilder, executeOpenAITool } from 'archetype-engine/ai'
+
+// Get tools in framework format
+const openaiTools = aiTools.openai()      // OpenAI function calling
+const anthropicTools = aiTools.anthropic() // Anthropic tool use
+
+// Execute tool calls manually
+const builder = createManifestBuilder()
+const result = executeOpenAITool(builder, 'add_entity', {
+  name: 'User',
+  fields: { email: { type: 'text', email: true } }
+})
+```
 
 ### Available Tools
 
@@ -68,83 +106,27 @@ if (!validation.valid) {
 | `add_entity` | Add entity with fields, relations, behaviors |
 | `update_entity` | Modify existing entity |
 | `remove_entity` | Remove entity |
-| `set_database` | Configure database (sqlite, postgres, mysql) |
+| `set_database` | Configure database (sqlite/postgres/mysql) |
 | `set_auth` | Enable authentication with providers |
 | `validate` | Check manifest for errors |
 | `generate` | Generate all code |
 
----
+## JSON Schema
 
-## CLI for AI Agents
+### Fields
 
-AI agents can use the CLI with `--json` flag for structured output.
-
-### Validate
-
-```bash
-npx archetype validate manifest.json --json
-```
-
-Success:
-```json
-{ "valid": true, "errors": [], "warnings": [] }
-```
-
-Failure:
-```json
-{
-  "valid": false,
-  "errors": [{
-    "code": "RELATION_TARGET_NOT_FOUND",
-    "path": "Post.relations.author.entity",
-    "message": "Entity 'User' not found",
-    "suggestion": "Add entity 'User' or fix the name"
-  }]
-}
-```
-
-### Generate
-
-```bash
-npx archetype generate manifest.json --json
-```
-
-Output:
-```json
-{
-  "success": true,
-  "template": "nextjs-drizzle-trpc",
-  "entities": ["User", "Post"],
-  "files": ["generated/db/schema.ts", "generated/hooks/useUser.ts"]
-}
-```
-
-### Stdin Mode
-
-Pipe JSON directly:
-
-```bash
-echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin --json
-```
-
----
-
-## JSON Schema Reference
-
-### Field Types
-
-```json
+```typescript
 {
   "type": "text" | "number" | "boolean" | "date",
-  "required": true,
-  "optional": true,
+  "required": true,           // default
+  "optional": true,           // shorthand for required: false
   "unique": false,
   "default": "value",
   "label": "Display Name",
 
-  // Text validations
-  "min": 5,
-  "max": 100,
+  // text only
+  "min": 5,                   // min length
+  "max": 100,                 // max length
   "email": true,
   "url": true,
   "regex": "^[a-z]+$",
@@ -152,7 +134,7 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
   "trim": true,
   "lowercase": true,
 
-  // Number validations
+  // number only
   "integer": true,
   "positive": true
 }
@@ -160,109 +142,97 @@ echo '{"entities": [...], "database": {...}}' | npx archetype generate --stdin -
 
 ### Relations
 
-```json
+```typescript
 {
   "type": "hasOne" | "hasMany" | "belongsToMany",
-  "entity": "TargetEntity",
-  "field": "customFieldName"
+  "entity": "TargetEntity"
 }
 ```
+
+| Type | Creates |
+|------|---------|
+| `hasOne` | Foreign key on this entity |
+| `hasMany` | Foreign key on target entity |
+| `belongsToMany` | Junction table |
 
 ### Entity
 
-```json
+```typescript
 {
-  "name": "User",
+  "name": "Post",
   "fields": {
-    "email": { "type": "text", "email": true, "unique": true },
-    "name": { "type": "text" }
+    "title": { "type": "text", "min": 1, "max": 200 },
+    "published": { "type": "boolean", "default": false }
   },
   "relations": {
-    "posts": { "type": "hasMany", "entity": "Post" }
+    "author": { "type": "hasOne", "entity": "User" }
   },
   "behaviors": {
-    "timestamps": true,
-    "softDelete": false,
-    "audit": false
+    "timestamps": true,    // createdAt, updatedAt
+    "softDelete": false    // deletedAt instead of hard delete
   },
-  "protected": "write"
+  "protected": "write"     // list/get public, mutations require auth
 }
 ```
 
-### Protection Options
+### Protection
 
-```json
-"protected": false        // All public (default)
-"protected": true         // All require auth
-"protected": "all"        // Same as true
-"protected": "write"      // list/get public, mutations protected
+```typescript
+protected: false      // all public (default)
+protected: true       // all require auth
+protected: "all"      // same as true
+protected: "write"    // list/get public, create/update/remove protected
 
-// Granular
-"protected": {
-  "list": false,
-  "get": false,
-  "create": true,
-  "update": true,
-  "remove": true
+// granular
+protected: {
+  list: false,
+  get: false,
+  create: true,
+  update: true,
+  remove: true
 }
 ```
 
-### Complete Manifest
+### Manifest
 
-```json
+```typescript
 {
   "entities": [...],
-  "template": "nextjs-drizzle-trpc",
-  "mode": "full" | "headless" | "api-only",
-
   "database": {
-    "type": "sqlite" | "postgres" | "mysql",
-    "file": "./app.db",
-    "url": "env:DATABASE_URL"
+    "type": "sqlite",          // sqlite | postgres | mysql
+    "file": "./app.db"         // sqlite only
+    // "url": "env:DATABASE_URL"  // postgres/mysql
   },
-
   "auth": {
     "enabled": true,
     "providers": ["credentials", "google", "github", "discord"],
-    "sessionStrategy": "jwt" | "database"
+    "sessionStrategy": "jwt"   // jwt | database
   },
-
-  "i18n": {
-    "languages": ["en", "es"],
-    "defaultLanguage": "en"
-  }
+  "template": "nextjs-drizzle-trpc",
+  "mode": "full"               // full | headless | api-only
 }
 ```
 
----
-
 ## Error Codes
 
-| Code | Description |
-|------|-------------|
-| `INVALID_ENTITY_NAME` | Entity name must be PascalCase |
-| `DUPLICATE_ENTITY` | Entity name already exists |
-| `INVALID_FIELD_TYPE` | Must be text/number/boolean/date |
-| `INVALID_FIELD_NAME` | Field name must be camelCase |
-| `RELATION_TARGET_NOT_FOUND` | Referenced entity doesn't exist |
-| `DATABASE_REQUIRED` | Mode 'full' requires database config |
-| `AUTH_REQUIRED_FOR_PROTECTED` | Protected entities need auth enabled |
-| `INVALID_DATABASE_TYPE` | Must be sqlite/postgres/mysql |
-| `SQLITE_REQUIRES_FILE` | SQLite needs file path |
-| `POSTGRES_REQUIRES_URL` | Postgres/MySQL need connection URL |
-| `INVALID_PROVIDER` | Auth provider not recognized |
-| `INVALID_MODE` | Must be full/headless/api-only |
+| Code | Fix |
+|------|-----|
+| `INVALID_ENTITY_NAME` | Use PascalCase (User, BlogPost) |
+| `DUPLICATE_ENTITY` | Rename one of the duplicate entities |
+| `INVALID_FIELD_TYPE` | Use text/number/boolean/date |
+| `INVALID_FIELD_NAME` | Use camelCase (firstName, createdAt) |
+| `RELATION_TARGET_NOT_FOUND` | Add the referenced entity first |
+| `DATABASE_REQUIRED` | Add database config for full mode |
+| `AUTH_REQUIRED_FOR_PROTECTED` | Enable auth to use protected entities |
+| `SQLITE_REQUIRES_FILE` | Add file path for SQLite |
+| `POSTGRES_REQUIRES_URL` | Add url for Postgres/MySQL |
 
----
+## System Prompt
 
-## System Prompt Template
-
-Use this for AI agents generating manifests:
+Use this for AI agents:
 
 ```
-You are an app builder. When users describe their app, generate a JSON manifest.
-
-## Schema
+You are an app builder. Generate JSON manifests for archetype-engine.
 
 Fields:
 - text: { type: "text", email?, url?, min?, max?, oneOf?, unique? }
@@ -271,13 +241,11 @@ Fields:
 - date: { type: "date", default?: "now" }
 
 Relations:
-- hasOne: Foreign key on this entity (e.g., Post hasOne User = authorId on Post)
-- hasMany: Foreign key on target (e.g., User hasMany Post)
-- belongsToMany: Creates junction table (e.g., Post belongsToMany Tag)
+- hasOne: FK on this entity (Post.author → Post has authorId)
+- hasMany: FK on target (User.posts → Post has userId)
+- belongsToMany: junction table (Post.tags → PostTag table)
 
-## Example
-
-User: "I want a blog with users and posts"
+Example - "blog with users and posts":
 
 {
   "entities": [
@@ -295,117 +263,47 @@ User: "I want a blog with users and posts"
         "content": { "type": "text" },
         "published": { "type": "boolean", "default": false }
       },
-      "relations": {
-        "author": { "type": "hasOne", "entity": "User" }
-      },
+      "relations": { "author": { "type": "hasOne", "entity": "User" } },
       "protected": "write"
     }
   ],
-  "database": { "type": "sqlite", "file": "./app.db" },
-  "auth": { "enabled": true, "providers": ["credentials"] }
+  "database": { "type": "sqlite", "file": "./app.db" }
 }
 
-## Workflow
-
-1. Generate manifest based on user description
-2. Run: npx archetype validate manifest.json --json
-3. If errors, fix and retry
-4. Run: npx archetype generate manifest.json --json
-5. Tell user to run: npx drizzle-kit push && npm run dev
+After generating, tell user to run:
+npx drizzle-kit push && npm run dev
 ```
-
----
 
 ## Programmatic API
 
-For direct control without AI frameworks:
-
 ```typescript
-import {
-  parseManifestJSON,
-  validateManifest,
-  getTemplate,
-  runTemplate,
-} from 'archetype-engine'
+import { parseManifestJSON, validateManifest, getTemplate, runTemplate } from 'archetype-engine'
 
-// 1. Parse JSON to internal representation
-const manifest = parseManifestJSON({
-  entities: [
-    { name: 'User', fields: { email: { type: 'text', email: true } } }
-  ],
-  database: { type: 'sqlite', file: './app.db' }
-})
+// Parse JSON to internal representation
+const manifest = parseManifestJSON(jsonFromAI)
 
-// 2. Validate
-const validation = validateManifest(manifestJSON)
-if (!validation.valid) {
-  console.error('Errors:', validation.errors)
-  process.exit(1)
-}
+// Validate
+const { valid, errors } = validateManifest(jsonFromAI)
+if (!valid) throw new Error(errors[0].message)
 
-// 3. Get template and generate
+// Generate
 const template = await getTemplate('nextjs-drizzle-trpc')
 const files = await runTemplate(template, manifest)
 ```
 
----
+## What Gets Generated
 
-## Why Use Archetype with AI?
-
-| Without Archetype | With Archetype |
-|-------------------|----------------|
-| AI generates 10+ files per entity | AI generates 1 JSON manifest |
-| AI must keep files in sync | Engine guarantees sync |
-| Errors are text strings | Structured JSON errors with suggestions |
-| Type safety depends on AI | Types guaranteed by engine |
-
-**The division of labor:**
-- **archetype-engine**: Generates backend (schema, validation, API, hooks)
-- **AI**: Describes entities and optionally generates UI that uses the hooks
-
-The AI doesn't need to understand Drizzle, Zod, or tRPC. It describes entities, and archetype ensures the generated hooks work correctly.
-
----
-
-## Appendix: Direct JSON Approach
-
-An alternative to the AI Toolkit. The AI generates the complete JSON manifest in one shot:
-
-```typescript
-import { validateManifest, parseManifestJSON, getTemplate, runTemplate } from 'archetype-engine'
-import { generateText } from 'ai'
-import { openai } from '@ai-sdk/openai'
-
-export async function generateFromDescription(description: string) {
-  // 1. AI generates manifest JSON directly
-  const result = await generateText({
-    model: openai('gpt-4o'),
-    system: MANIFEST_PROMPT, // Use the system prompt template above
-    prompt: description
-  })
-
-  const manifestJSON = JSON.parse(result.text)
-
-  // 2. Validate
-  const validation = validateManifest(manifestJSON)
-  if (!validation.valid) {
-    return { success: false, errors: validation.errors }
-  }
-
-  // 3. Generate
-  const manifest = parseManifestJSON(manifestJSON)
-  const template = await getTemplate('nextjs-drizzle-trpc')
-  const files = await runTemplate(template!, manifest)
-
-  return { success: true, files }
-}
+```
+generated/
+├── db/schema.ts           # Drizzle ORM tables
+├── schemas/user.ts        # Zod validation
+├── trpc/routers/user.ts   # CRUD endpoints
+├── hooks/useUser.ts       # React Query hooks
+└── erd.md                 # Entity diagram
 ```
 
-**Comparison:**
+**Note:** Archetype generates backend infrastructure and hooks. It does not generate UI components. The AI (or developer) writes React components that import the generated hooks:
 
-| AI Toolkit (Function Calling) | Direct JSON |
-|-------------------------------|-------------|
-| Interactive, step-by-step | Single-shot generation |
-| AI can ask clarifying questions | AI must infer everything upfront |
-| Better for complex apps | Better for simple apps |
-| Uses `aiTools.vercel(builder)` | Uses `parseManifestJSON()` |
+```tsx
+import { useUsers, useUserForm } from '@/generated/hooks/useUser'
+```
