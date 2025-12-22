@@ -30,8 +30,8 @@ npm-debug.log*
 # Test coverage
 coverage/
 
-# Generated docs (built by CI)
-docs/
+# Generated API docs (built by CI, but NOT website/docs which is source content)
+/docs/
 
 # Claude Code
 .claude/
