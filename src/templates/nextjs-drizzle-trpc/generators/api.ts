@@ -387,8 +387,8 @@ function generateFilterBuilder(entity: EntityIR, tableName: string): string {
   const fieldConditions = Object.entries(entity.fields)
     .filter(([_, field]) => field.type !== 'computed')
     .map(([fieldName, field]) => {
-    const columnName = getColumnName(fieldName)
-    const column = `${tableName}.${columnName}`
+    // Use fieldName (camelCase) for JS property access, not snake_case column name
+    const column = `${tableName}.${fieldName}`
 
     if (field.type === 'text') {
       return `    if (where.${fieldName} !== undefined) {
@@ -425,7 +425,7 @@ function generateFilterBuilder(entity: EntityIR, tableName: string): string {
     return ''
   }).filter(Boolean).join('\n')
 
-  return `function buildFilters(where: NonNullable<typeof listInput._type>['where']) {
+  return `function buildFilters(where: NonNullable<z.infer<typeof listInput>>['where']) {
   const conditions: SQL[] = []
   if (!where) return conditions
 
@@ -451,8 +451,8 @@ function generateSearchBuilder(entity: EntityIR, tableName: string): string {
   }
 
   const searchConditions = textFields.map(fieldName => {
-    const columnName = getColumnName(fieldName)
-    return `like(${tableName}.${columnName}, \`%\${search}%\`)`
+    // Use fieldName (camelCase) for JS property access, not snake_case column name
+    return `like(${tableName}.${fieldName}, \`%\${search}%\`)`
   }).join(',\n      ')
 
   return `function buildSearch(search: string | undefined) {
@@ -508,11 +508,11 @@ function generateOrderByBuilder(entity: EntityIR, tableName: string): string {
   const allFields = [...fieldNames, 'createdAt', 'updatedAt']
 
   const fieldCases = allFields.map(fieldName => {
-    const columnName = getColumnName(fieldName)
-    return `    case '${fieldName}': column = ${tableName}.${columnName}; break`
+    // Use fieldName (camelCase) for JS property access, not snake_case column name
+    return `    case '${fieldName}': column = ${tableName}.${fieldName}; break`
   }).join('\n')
 
-  return `function buildOrderBy(orderBy: NonNullable<typeof listInput._type>['orderBy']) {
+  return `function buildOrderBy(orderBy: NonNullable<z.infer<typeof listInput>>['orderBy']) {
   if (!orderBy) return undefined
   let column: any
   switch (orderBy.field) {

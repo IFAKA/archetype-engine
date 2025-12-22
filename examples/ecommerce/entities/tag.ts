@@ -12,4 +12,5 @@ export const Tag = defineEntity('Tag', {
   behaviors: {
     timestamps: true,
   },
+  protected: false,
 })

@@ -24,4 +24,5 @@ export const ProductVariant = defineEntity('ProductVariant', {
     timestamps: true,
     softDelete: true,
   },
+  protected: false,
 })

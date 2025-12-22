@@ -175,7 +175,11 @@ function generateEntitySchema(entity: EntityIR, useI18n: boolean): string {
   for (const [relName, rel] of Object.entries(entity.relations)) {
     if (rel.type === 'hasOne') {
       const fkField = rel.field || `${relName}Id`
-      staticFields.push(`    ${fkField}: z.string().optional(),`)
+      // Skip if this field was already defined in entity.fields
+      if (entity.fields[fkField]) continue
+      // Match required status from relation - if relation is optional, FK is optional
+      const zodType = rel.optional ? 'z.string().optional()' : 'z.string()'
+      staticFields.push(`    ${fkField}: ${zodType},`)
     }
   }
 
@@ -189,7 +193,11 @@ function generateEntitySchema(entity: EntityIR, useI18n: boolean): string {
     for (const [relName, rel] of Object.entries(entity.relations)) {
       if (rel.type === 'hasOne') {
         const fkField = rel.field || `${relName}Id`
-        i18nFields.push(`    ${fkField}: z.string().optional(),`)
+        // Skip if this field was already defined in entity.fields
+        if (entity.fields[fkField]) continue
+        // Match required status from relation - if relation is optional, FK is optional
+        const zodType = rel.optional ? 'z.string().optional()' : 'z.string()'
+        i18nFields.push(`    ${fkField}: ${zodType},`)
       }
     }
 

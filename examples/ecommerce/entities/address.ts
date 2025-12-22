@@ -3,6 +3,15 @@ import { defineEntity, text, boolean, hasOne } from '../../../src'
 
 export const Address = defineEntity('Address', {
   fields: {
+    // Person Information (SFRA requirement)
+    firstName: text().required().min(1).max(50).trim().label('First Name'),
+    lastName: text().required().min(1).max(50).trim().label('Last Name'),
+    phone: text().optional().label('Phone Number'),
+
+    // SFCC Integration
+    addressId: text().optional().label('Address Book ID'),
+
+    // Address Details
     label: text().optional().max(50).label('Address Label'),
     street1: text().required().min(5).max(200).label('Street Address'),
     street2: text().optional().max(200).label('Apartment/Suite'),
@@ -21,4 +30,5 @@ export const Address = defineEntity('Address', {
     timestamps: true,
     softDelete: false,
   },
+  protected: 'all',
 })

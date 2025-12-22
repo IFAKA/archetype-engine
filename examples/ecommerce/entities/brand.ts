@@ -18,4 +18,5 @@ export const Brand = defineEntity('Brand', {
     timestamps: true,
     softDelete: true,
   },
+  protected: false,
 })

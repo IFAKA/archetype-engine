@@ -87,6 +87,25 @@ export interface ${entity.name}OrderBy {
 }
 
 /**
+ * JavaScript reserved words that can't be used as variable names
+ */
+const JS_RESERVED_WORDS = new Set([
+  'break', 'case', 'catch', 'continue', 'debugger', 'default', 'delete',
+  'do', 'else', 'finally', 'for', 'function', 'if', 'in', 'instanceof',
+  'new', 'return', 'switch', 'this', 'throw', 'try', 'typeof', 'var',
+  'void', 'while', 'with', 'class', 'const', 'enum', 'export', 'extends',
+  'import', 'super', 'implements', 'interface', 'let', 'package', 'private',
+  'protected', 'public', 'static', 'yield', 'await', 'null', 'undefined', 'true', 'false'
+])
+
+/**
+ * Get a safe variable name, prefixing with underscore if it's a reserved word
+ */
+function getSafeVarName(name: string): string {
+  return JS_RESERVED_WORDS.has(name.toLowerCase()) ? `_${name.toLowerCase()}` : name.toLowerCase()
+}
+
+/**
  * Generate complete hooks file for an entity
  *
  * @param entity - Entity IR with name and field definitions
@@ -96,6 +115,7 @@ export interface ${entity.name}OrderBy {
 function generateEntityHooks(entity: EntityIR, manifest: ManifestIR): string {
   const name = entity.name
   const lowerName = name.toLowerCase()
+  const safeVarName = getSafeVarName(name)
   const useI18n = manifest.i18n.languages.length > 1
 
   // Schema imports
@@ -163,14 +183,19 @@ export interface Use${name}sOptions {
   search?: string
 }
 
-export function use${name}s(options?: Use${name}sOptions) {
+// React Query options for controlling query behavior
+export interface QueryOptions {
+  enabled?: boolean
+}
+
+export function use${name}s(options?: Use${name}sOptions, queryOptions?: QueryOptions) {
   return trpc.${lowerName}.list.useQuery({
     page: options?.page ?? 1,
     limit: options?.limit ?? 20,
     where: options?.where,
     orderBy: options?.orderBy,
     search: options?.search,
-  })
+  }, queryOptions)
 }
 
 // ============ GET ============
@@ -213,7 +238,7 @@ ${tDeclaration}
 export function use${name}EditForm(id: string) {
 ${tDeclaration}
   const utils = trpc.useUtils()
-  const { data: ${lowerName}, isLoading } = trpc.${lowerName}.get.useQuery({ id })
+  const { data: ${safeVarName}, isLoading } = trpc.${lowerName}.get.useQuery({ id })
 
   const mutation = trpc.${lowerName}.update.useMutation({
     onSuccess: () => {
@@ -221,7 +246,7 @@ ${tDeclaration}
     },
   })
 
-  const formValues = useMemo(() => nullToUndefined(${lowerName}), [${lowerName}])
+  const formValues = useMemo(() => nullToUndefined(${safeVarName}) as ${name}Update | undefined, [${safeVarName}])
 
   const form = useForm<${name}Update>({
     resolver: zodResolver(${updateResolverSchema}),

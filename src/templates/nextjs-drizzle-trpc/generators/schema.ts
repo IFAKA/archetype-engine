@@ -145,10 +145,18 @@ function generateEntity(entity: EntityIR, isSqlite: boolean, ctx: GeneratorConte
     lines.push(generateFieldDefinition(fieldName, config, isSqlite, ctx, entity.name))
   }
 
-  // Foreign keys for hasOne relations
+  // Foreign keys for hasOne relations (skip if field already exists)
   for (const [relName, rel] of Object.entries(entity.relations)) {
     if (rel.type === 'hasOne') {
       const fkField = rel.field || `${relName}Id`
+      // Skip if this field was already defined in entity.fields
+      if (entity.fields[fkField]) continue
+      // Skip self-referential relations - they cause TypeScript issues with inline references
+      if (rel.entity === entity.name) {
+        const fkColumn = ctx.naming.getColumnName(fkField)
+        lines.push(`  ${fkField}: text('${fkColumn}'), // Self-reference handled via relations`)
+        continue
+      }
       const fkColumn = ctx.naming.getColumnName(fkField)
       const targetTable = ctx.naming.getTableName(rel.entity)
       const notNull = rel.optional ? '' : '.notNull()'

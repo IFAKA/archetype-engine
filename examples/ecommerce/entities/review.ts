@@ -22,4 +22,5 @@ export const Review = defineEntity('Review', {
     timestamps: true,
     softDelete: true,
   },
+  protected: 'write',
 })

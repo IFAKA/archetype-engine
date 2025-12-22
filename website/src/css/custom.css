@@ -1,0 +1,263 @@
+/**
+ * ADHD-Friendly Theme
+ *
+ * Principles:
+ * - Extreme whitespace (breathing room)
+ * - High contrast (important things pop)
+ * - Monospace aesthetic (developer focus)
+ * - Dark-first (easy on eyes)
+ * - Minimal visual noise
+ */
+
+/* Import monospace font for headings */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Muted light theme - for those who prefer it */
+  --ifm-color-primary: #6366f1;
+  --ifm-color-primary-dark: #4f46e5;
+  --ifm-color-primary-darker: #4338ca;
+  --ifm-color-primary-darkest: #3730a3;
+  --ifm-color-primary-light: #818cf8;
+  --ifm-color-primary-lighter: #a5b4fc;
+  --ifm-color-primary-lightest: #c7d2fe;
+
+  --ifm-code-font-size: 90%;
+  --ifm-font-family-base: system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'JetBrains Mono', monospace;
+  --ifm-font-size-base: 16px;
+  --ifm-line-height-base: 1.8;
+
+  --docusaurus-highlighted-code-line-bg: rgba(99, 102, 241, 0.1);
+}
+
+/* Dark mode - the primary experience */
+[data-theme='dark'] {
+  --ifm-background-color: #0a0a0a;
+  --ifm-background-surface-color: #111111;
+  --ifm-navbar-background-color: #0a0a0a;
+  --ifm-footer-background-color: #0a0a0a;
+
+  --ifm-color-primary: #a5b4fc;
+  --ifm-color-primary-dark: #818cf8;
+  --ifm-color-primary-darker: #6366f1;
+  --ifm-color-primary-darkest: #4f46e5;
+  --ifm-color-primary-light: #c7d2fe;
+  --ifm-color-primary-lighter: #e0e7ff;
+  --ifm-color-primary-lightest: #eef2ff;
+
+  --ifm-font-color-base: #e5e5e5;
+  --ifm-font-color-secondary: #a3a3a3;
+
+  --docusaurus-highlighted-code-line-bg: rgba(165, 180, 252, 0.15);
+}
+
+/* Typography - clean and scannable */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Remove visual clutter */
+.navbar {
+  box-shadow: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .navbar {
+  background: var(--ifm-navbar-background-color);
+}
+
+.navbar__title {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Footer - minimal */
+.footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 2rem 0;
+}
+
+.footer__links {
+  margin-bottom: 1rem;
+}
+
+.footer__copyright {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+/* Code blocks - the star of the show */
+pre {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+[data-theme='dark'] pre {
+  background: #0f0f0f !important;
+}
+
+code {
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 4px;
+}
+
+/* Buttons - high contrast, minimal */
+.button {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  border-radius: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: all 0.15s ease;
+}
+
+.button--primary {
+  background: var(--ifm-color-primary);
+  border: none;
+}
+
+.button--primary:hover {
+  background: var(--ifm-color-primary-dark);
+  transform: translateY(-1px);
+}
+
+/* Links - subtle until hovered */
+a {
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* Hero section overrides */
+.hero {
+  background: transparent !important;
+  padding: 0;
+}
+
+.hero--primary {
+  background: transparent !important;
+}
+
+.hero__title {
+  font-size: 4rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
+}
+
+.hero__subtitle {
+  font-size: 1.25rem;
+  font-weight: 400;
+  opacity: 0.7;
+  max-width: 400px;
+  margin: 0 auto 2rem;
+}
+
+/* Docs - generous spacing */
+.markdown {
+  line-height: 1.9;
+}
+
+.markdown h1 {
+  margin-top: 0;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+}
+
+.markdown h2 {
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.markdown h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.markdown p {
+  margin-bottom: 1.5rem;
+}
+
+.markdown ul, .markdown ol {
+  margin-bottom: 1.5rem;
+}
+
+.markdown li {
+  margin-bottom: 0.5rem;
+}
+
+/* Sidebar - clean */
+.menu {
+  font-weight: 400;
+}
+
+.menu__link {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+}
+
+.menu__link--active {
+  font-weight: 500;
+}
+
+/* Table of contents - subtle */
+.table-of-contents {
+  font-size: 0.85rem;
+}
+
+.table-of-contents__link {
+  opacity: 0.7;
+}
+
+.table-of-contents__link:hover,
+.table-of-contents__link--active {
+  opacity: 1;
+}
+
+/* Reduce motion for those who need it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Focus states - visible but not distracting */
+:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+/* Selection - subtle */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+/* Scrollbar - minimal */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

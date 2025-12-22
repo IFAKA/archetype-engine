@@ -4,7 +4,7 @@ import { defineEntity, text, number, date, hasOne } from '../../../src'
 export const Payment = defineEntity('Payment', {
   fields: {
     transactionId: text().required().unique().label('Transaction ID'),
-    provider: text().required().oneOf(['stripe', 'paypal', 'square', 'manual'] as const).label('Payment Provider'),
+    provider: text().required().oneOf(['Klarna', 'PayPalStandard', 'Adyen', 'CreditCard', 'Manual'] as const).label('Payment Provider'),
     method: text().required().oneOf(['card', 'bank_transfer', 'wallet', 'cash'] as const).label('Payment Method'),
     status: text().default('pending').oneOf([
       'pending',
@@ -23,6 +23,10 @@ export const Payment = defineEntity('Payment', {
     errorMessage: text().optional().label('Error Message'),
     processedAt: date().optional(),
     refundedAt: date().optional(),
+
+    // SFRA-specific fields
+    paymentMethodId: text().optional().label('Payment Method ID'),
+    processorResponse: text().optional().label('Processor Response (JSON)'),
   },
   relations: {
     order: hasOne('Order'),
@@ -31,4 +35,5 @@ export const Payment = defineEntity('Payment', {
     timestamps: true,
     audit: true,
   },
+  protected: 'all',
 })

@@ -20,4 +20,5 @@ export const Category = defineEntity('Category', {
     timestamps: true,
     softDelete: true,
   },
+  protected: false,
 })

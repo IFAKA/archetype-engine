@@ -17,4 +17,5 @@ export const ProductImage = defineEntity('ProductImage', {
   behaviors: {
     timestamps: true,
   },
+  protected: false,
 })

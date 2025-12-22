@@ -66,8 +66,8 @@ function i18nFilesToRecord(files: GeneratedFile[]): Record<string, Record<string
 
 describe('E-commerce Example', () => {
   describe('Manifest Structure', () => {
-    it('has 15 entities', () => {
-      expect(manifest.entities).toHaveLength(15)
+    it('has 18 entities', () => {
+      expect(manifest.entities).toHaveLength(18)
     })
 
     it('has all expected entity names', () => {
@@ -87,6 +87,9 @@ describe('E-commerce Example', () => {
       expect(names).toContain('CartItem')
       expect(names).toContain('WishlistItem')
       expect(names).toContain('Review')
+      expect(names).toContain('Coupon')
+      expect(names).toContain('PaymentInstrument')
+      expect(names).toContain('Store')
     })
 
     it('uses postgres database', () => {
@@ -247,7 +250,7 @@ describe('Zod Schema Generation', () => {
   })
 
   it('generates schemas for all entities', () => {
-    expect(Object.keys(schemas)).toHaveLength(15)
+    expect(Object.keys(schemas)).toHaveLength(18)
     expect(schemas).toHaveProperty('Product')
     expect(schemas).toHaveProperty('Order')
     expect(schemas).toHaveProperty('Customer')
@@ -294,8 +297,8 @@ describe('tRPC Router Generation', () => {
   })
 
   it('generates routers for all entities', () => {
-    // 15 entities (index file is not captured by filesToRecord since it doesn't match the pattern)
-    expect(Object.keys(routers)).toHaveLength(16)
+    // 18 entities + 1 index file = 19 (index file is not captured by filesToRecord since it doesn't match the pattern)
+    expect(Object.keys(routers)).toHaveLength(19)
   })
 
   it('generates CRUD procedures', () => {
@@ -453,7 +456,7 @@ describe('React Hooks Generation', () => {
   })
 
   it('generates hooks for all entities', () => {
-    expect(Object.keys(hooks)).toHaveLength(15)
+    expect(Object.keys(hooks)).toHaveLength(18)
   })
 
   it('generates useForm hook', () => {

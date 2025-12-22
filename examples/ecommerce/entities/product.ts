@@ -19,6 +19,19 @@ export const Product = defineEntity('Product', {
     isDigital: boolean().default(false),
     taxable: boolean().default(true),
     publishedAt: date().optional(),
+
+    // SFCC Product Structure
+    masterId: text().optional().label('Master Product ID'),
+
+    // SEO Fields (critical for SFRA)
+    metaTitle: text().optional().max(200).label('Meta Title'),
+    metaDescription: text().optional().max(500).label('Meta Description'),
+    metaKeywords: text().optional().max(500).label('Meta Keywords'),
+
+    // Additional Content
+    longDescription: text().optional().max(10000).label('Long Description'),
+    pageTitle: text().optional().max(200).label('Page Title'),
+    pageDescription: text().optional().max(1000).label('Page Description'),
   },
   relations: {
     category: hasOne('Category'),
@@ -34,4 +47,5 @@ export const Product = defineEntity('Product', {
     softDelete: true,
     audit: true,
   },
+  protected: false,
 })

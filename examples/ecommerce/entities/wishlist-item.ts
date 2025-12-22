@@ -13,4 +13,5 @@ export const WishlistItem = defineEntity('WishlistItem', {
   behaviors: {
     timestamps: true,
   },
+  protected: 'write',
 })

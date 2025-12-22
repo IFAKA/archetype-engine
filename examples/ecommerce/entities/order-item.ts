@@ -1,5 +1,5 @@
 // Order Item entity
-import { defineEntity, text, number, hasOne } from '../../../src'
+import { defineEntity, text, number, boolean, hasOne } from '../../../src'
 
 export const OrderItem = defineEntity('OrderItem', {
   fields: {
@@ -12,6 +12,10 @@ export const OrderItem = defineEntity('OrderItem', {
     sku: text().required().label('Product SKU'),
     productName: text().required().label('Product Name'),
     variantName: text().optional().label('Variant Name'),
+
+    // Gift Options
+    isGift: boolean().default(false).label('Is Gift'),
+    giftMessage: text().optional().max(500).label('Gift Message'),
   },
   relations: {
     order: hasOne('Order'),
@@ -21,4 +25,5 @@ export const OrderItem = defineEntity('OrderItem', {
   behaviors: {
     timestamps: true,
   },
+  protected: 'all',
 })

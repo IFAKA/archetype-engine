@@ -35,17 +35,31 @@ export const Order = defineEntity('Order', {
     shippedAt: date().optional(),
     deliveredAt: date().optional(),
     cancelledAt: date().optional(),
+
+    // Guest Order Support
+    customerEmail: text().required().email().label('Customer Email'),
+    customerFirstName: text().required().min(1).max(50).trim().label('Customer First Name'),
+    customerLastName: text().required().min(1).max(50).trim().label('Customer Last Name'),
+
+    // SFCC Integration
+    customerNo: text().optional().label('Customer Number'),
+    orderToken: text().optional().unique().label('Order Token'),
+
+    // Marketplace Integration
+    isMiraklOrder: boolean().default(false).label('Marketplace Order'),
   },
   relations: {
-    customer: hasOne('Customer'),
+    customer: hasOne('Customer').optional(),
     items: hasMany('OrderItem'),
     shippingAddress: hasOne('Address'),
     billingAddress: hasOne('Address'),
     payments: hasMany('Payment'),
+    shipments: hasMany('Shipment'),
   },
   behaviors: {
     timestamps: true,
     softDelete: true,
     audit: true,
   },
+  protected: 'write',
 })
