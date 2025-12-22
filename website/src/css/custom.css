@@ -62,11 +62,12 @@ h1, h2, h3, h4, h5, h6 {
 /* Remove visual clutter */
 .navbar {
   box-shadow: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 [data-theme='dark'] .navbar {
   background: var(--ifm-navbar-background-color);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .navbar__title {
@@ -77,8 +78,12 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Footer - minimal */
 .footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: 2rem 0;
+}
+
+[data-theme='dark'] .footer {
+  border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 .footer__links {
@@ -92,12 +97,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Code blocks - the star of the show */
 pre {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
 }
 
 [data-theme='dark'] pre {
   background: #0f0f0f !important;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 code {
@@ -175,7 +181,11 @@ a:hover {
   margin-top: 3rem;
   margin-bottom: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .markdown h2 {
+  border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 .markdown h3 {

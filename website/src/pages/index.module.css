@@ -86,21 +86,34 @@
   font-weight: 500;
   padding: 0.75rem 1.5rem;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
+[data-theme='dark'] .tab {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .tab:hover {
   border-color: rgba(99, 102, 241, 0.3);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme='dark'] .tab:hover {
   color: rgba(255, 255, 255, 0.7);
 }
 
 .tabActive {
   background: rgba(99, 102, 241, 0.15);
   border-color: rgba(99, 102, 241, 0.4);
+  color: #4f46e5;
+}
+
+[data-theme='dark'] .tabActive {
   color: #a5b4fc;
 }
 
@@ -151,8 +164,8 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -160,9 +173,18 @@
   width: 100%;
 }
 
+[data-theme='dark'] .outputItem {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
 .outputItem:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.04);
   border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme='dark'] .outputItem:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .outputItem:hover .outputArrow {
@@ -174,8 +196,12 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #a5b4fc;
+  color: #4f46e5;
   min-width: 90px;
+}
+
+[data-theme='dark'] .outputLabel {
+  color: #a5b4fc;
 }
 
 .outputDesc {
@@ -198,7 +224,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -207,9 +233,13 @@
   padding: 2rem;
 }
 
+[data-theme='dark'] .modalOverlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
 .modal {
-  background: #111;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   max-width: 700px;
   width: 100%;
@@ -219,18 +249,31 @@
   overflow: hidden;
 }
 
+[data-theme='dark'] .modal {
+  background: #111;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .modalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .modalHeader {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .modalTitle {
   font-family: 'JetBrains Mono', monospace;
   font-size: 1rem;
   font-weight: 500;
+  color: #4f46e5;
+}
+
+[data-theme='dark'] .modalTitle {
   color: #a5b4fc;
 }
 
@@ -238,14 +281,22 @@
   font-size: 1.5rem;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
   padding: 0;
   line-height: 1;
   transition: color 0.15s ease;
 }
 
+[data-theme='dark'] .modalClose {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .modalClose:hover {
+  color: #000;
+}
+
+[data-theme='dark'] .modalClose:hover {
   color: white;
 }
 
@@ -276,10 +327,14 @@
   display: flex;
   gap: 4rem;
   padding: 4rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   width: 100%;
   max-width: 800px;
   justify-content: center;
+}
+
+[data-theme='dark'] .features {
+  border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 .feature {
@@ -298,8 +353,12 @@
   align-items: center;
   justify-content: center;
   background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
+  color: #4f46e5;
   border-radius: 6px;
+}
+
+[data-theme='dark'] .featureIcon {
+  color: #a5b4fc;
 }
 
 .featureText {
@@ -316,9 +375,15 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 1.1rem;
   padding: 1rem 2rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  color: #4f46e5;
+}
+
+[data-theme='dark'] .command {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
   color: #a5b4fc;
 }
 
