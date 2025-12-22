@@ -42,6 +42,20 @@ npx archetype init
 npx archetype generate
 ```
 
+### Option 3: Local Development (npm link)
+
+To use an unpublished local version:
+
+```bash
+# In archetype-engine directory
+npm run build && npm link
+
+# In your project
+npm link archetype-engine
+npx archetype init
+npx archetype generate
+```
+
 ## CLI Commands
 
 | Command | Description |

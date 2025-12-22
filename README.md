@@ -40,6 +40,18 @@ npx archetype generate
 npx drizzle-kit push && npm run dev
 ```
 
+### Local Development (npm link)
+
+To use a local unpublished version:
+
+```bash
+# In archetype-engine directory
+npm run build && npm link
+
+# In your project
+npm link archetype-engine
+```
+
 **Done.** You now have database tables, type-safe API, validation, and React hooks.
 
 ---

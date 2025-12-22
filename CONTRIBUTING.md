@@ -2,6 +2,42 @@
 
 This guide helps you understand the codebase architecture so you can contribute effectively.
 
+## Local Development Setup
+
+Use `npm link` to test your local changes in another project without publishing to npm.
+
+### Step 1: Build and link archetype-engine
+
+```bash
+cd /path/to/archetype-engine
+npm install
+npm run build
+npm link
+```
+
+### Step 2: Link in your target project
+
+```bash
+cd /path/to/my-app
+npm link archetype-engine
+```
+
+Now `my-app` uses your local version. After making changes to archetype-engine, run `npm run build` to see them reflected.
+
+### Step 3: Unlink when done
+
+```bash
+# In your target project
+npm unlink archetype-engine
+npm install archetype-engine  # Install from npm registry instead
+```
+
+### Tips
+
+- Always run `npm run build` after changes before testing
+- Use `npm run test:run` to verify changes don't break existing functionality
+- The CLI commands (`npx archetype init`, `npx archetype generate`) will use your linked version
+
 ## Architecture Overview
 
 ```
