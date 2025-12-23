@@ -84,12 +84,6 @@ Full documentation available at **[archetype-engine.dev](https://archetype-engin
 
 ---
 
-## Examples
-
-See [`examples/ecommerce/`](examples/ecommerce/) for a complete e-commerce schema with 15+ entities.
-
----
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details.
