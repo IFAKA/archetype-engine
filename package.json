@@ -73,14 +73,14 @@
     "declarative",
     "entity-framework"
   ],
-  "author": "",
+  "author": "IFAKA",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/archetype-engine.git"
+    "url": "https://github.com/IFAKA/archetype-engine.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/archetype-engine/issues"
+    "url": "https://github.com/IFAKA/archetype-engine/issues"
   },
-  "homepage": "https://archetype-engine.dev"
+  "homepage": "https://archetype-engine.vercel.app"
 }

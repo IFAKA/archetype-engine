@@ -160,16 +160,16 @@ No API boilerplate. No manual validation. No CRUD repetition. Just works.
 
 ## Documentation
 
-📚 **Full docs:** [archetype-engine.dev](https://archetype-engine.dev)
+📚 **Full docs:** [archetype-engine.vercel.app](https://archetype-engine.vercel.app)
 
 **Popular guides:**
-- [Getting Started](https://archetype-engine.dev/docs/getting-started) - 5-minute tutorial
-- [Fields & Validation](https://archetype-engine.dev/docs/fields) - text(), number(), date(), etc.
-- [Relations](https://archetype-engine.dev/docs/relations) - hasOne, hasMany, belongsToMany
-- [Authentication](https://archetype-engine.dev/docs/authentication) - Protect routes & entities
-- [Filtering & Search](https://archetype-engine.dev/docs/filtering) - Build admin panels
-- [Lifecycle Hooks](https://archetype-engine.dev/docs/hooks) - Custom business logic
-- [AI Integration](https://archetype-engine.dev/docs/ai-module) - Build AI app builders
+- [Getting Started](https://archetype-engine.vercel.app/docs/getting-started) - 5-minute tutorial
+- [Fields & Validation](https://archetype-engine.vercel.app/docs/fields) - text(), number(), date(), etc.
+- [Relations](https://archetype-engine.vercel.app/docs/relations) - hasOne, hasMany, belongsToMany
+- [Authentication](https://archetype-engine.vercel.app/docs/authentication) - Protect routes & entities
+- [Filtering & Search](https://archetype-engine.vercel.app/docs/filtering) - Build admin panels
+- [Lifecycle Hooks](https://archetype-engine.vercel.app/docs/hooks) - Custom business logic
+- [AI Integration](https://archetype-engine.vercel.app/docs/ai-module) - Build AI app builders
 
 ---
 
@@ -231,9 +231,9 @@ MIT - Use freely in commercial and open-source projects.
 
 ## Support
 
-- 📖 **Docs:** [archetype-engine.dev](https://archetype-engine.dev)
-- 🐛 **Issues:** [GitHub Issues](https://github.com/yourusername/archetype-engine/issues)
-- 💬 **Discussions:** [GitHub Discussions](https://github.com/yourusername/archetype-engine/discussions)
+- 📖 **Docs:** [archetype-engine.vercel.app](https://archetype-engine.vercel.app)
+- 🐛 **Issues:** [GitHub Issues](https://github.com/IFAKA/archetype-engine/issues)
+- 💬 **Discussions:** [GitHub Discussions](https://github.com/IFAKA/archetype-engine/discussions)
 - 🐦 **Updates:** Follow [@archetype_dev](https://twitter.com/archetype_dev)
 
 ---
