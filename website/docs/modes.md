@@ -29,10 +29,14 @@ npx archetype init --yes
 
 ```
 generated/
-├── db/schema.ts          ← Drizzle tables
-├── schemas/product.ts    ← Zod validation
-├── trpc/routers/         ← CRUD API
-└── hooks/useProduct.ts   ← React Query hooks
+├── db/schema.ts              ← Drizzle tables
+├── schemas/product.ts        ← Zod validation
+├── trpc/routers/             ← CRUD API
+├── hooks/useProduct.ts       ← React Query hooks
+├── tests/product.test.ts     ← Vitest tests
+├── docs/openapi.json         ← API documentation
+├── seeds/product.ts          ← Sample data
+└── i18n/en/product.json      ← Translation keys
 ```
 
 ### Config example
@@ -63,9 +67,12 @@ npx archetype init --headless
 ```
 generated/
 ├── schemas/product.ts         ← Zod validation
-├── services/productService.ts ← API client
+├── services/productService.ts ← API client stubs
 ├── trpc/routers/              ← Routers call services
-└── hooks/useProduct.ts        ← React Query hooks
+├── hooks/useProduct.ts        ← React Query hooks
+├── tests/product.test.ts      ← Vitest tests (no DB tests)
+├── docs/openapi.json          ← API documentation
+└── i18n/en/product.json       ← Translation keys
 ```
 
 ### Config example

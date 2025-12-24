@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2024-12-24
+
+### 📚 Documentation Improvements
+
+Major documentation overhaul to sync website docs with codebase capabilities.
+
+### Added
+
+#### New Documentation Pages
+- **JSON Manifest Guide** (`json-manifest.md`) - Complete guide for AI-optimized workflow
+  - Field definitions with all types and validations
+  - Relations (hasOne, hasMany, belongsToMany)
+  - Complete e-commerce example
+  - CLI validation commands
+- **External Sources Guide** (`external-sources.md`) - Headless mode and external API integration
+  - Configuration options (path prefix, resource names, endpoint overrides)
+  - Authentication (Bearer, API Key)
+  - Use cases (Headless CMS, Legacy APIs, Microservices)
+  - Hybrid mode (database + external sources)
+
+### Fixed
+
+- **Relations Documentation** - Corrected `hasOne()` usage (was incorrectly showing `belongsTo()` which doesn't exist)
+- **CLI Commands** - Added missing `validate` and `generate manifest.json` commands
+- **Generated Code** - Enhanced with complete code examples for validation and routers
+
+### Changed
+
+- **Modes Documentation** - Updated to show all generators (tests, docs, seeds, i18n) in output
+- **Intro Page** - Added i18n to generated output list
+- **Website Sidebar** - Added new doc pages to Advanced section
+- **Generated Code Reference** - Expanded validation and API router sections with code examples
+
 ## [2.1.0] - 2024-12-24
 
 ### 🤖 AI Assistant Integration

@@ -35,7 +35,13 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Advanced',
       collapsed: true,
-      items: ['computed-fields', 'enums', 'ai-module'],
+      items: [
+        'computed-fields',
+        'enums',
+        'json-manifest',
+        'external-sources',
+        'ai-module',
+      ],
     },
 
     // Reference

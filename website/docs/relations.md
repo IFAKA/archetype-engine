@@ -8,20 +8,20 @@ Relations define how entities connect to each other. Archetype supports three re
 
 ## Relation Types
 
-### belongsTo()
+### hasOne()
 
-Creates a foreign key to another entity. Use for "many-to-one" or "one-to-one" relationships.
+Creates a foreign key to another entity. Use for "many-to-one" or "one-to-one" relationships where this entity references another.
 
 ```typescript
-import { defineEntity, text, belongsTo } from 'archetype-engine'
+import { defineEntity, text, hasOne } from 'archetype-engine'
 
 export const Post = defineEntity('Post', {
   fields: {
     title: text().required(),
   },
   relations: {
-    author: belongsTo('User'),      // Creates author_id column
-    category: belongsTo('Category'), // Creates category_id column
+    author: hasOne('User'),      // Creates author_id column
+    category: hasOne('Category'), // Creates category_id column
   },
 })
 ```
@@ -36,26 +36,17 @@ export const posts = sqliteTable('posts', {
 })
 ```
 
-### hasOne()
+**Inverse relation:**
 
-Indicates a one-to-one relationship. Creates a foreign key on the related entity.
+The related entity typically has a `hasMany()` relation pointing back:
 
 ```typescript
 export const User = defineEntity('User', {
   fields: {
-    email: text().required().email(),
+    name: text().required(),
   },
   relations: {
-    profile: hasOne('Profile'),  // Profile has userId column
-  },
-})
-
-export const Profile = defineEntity('Profile', {
-  fields: {
-    bio: text().optional(),
-  },
-  relations: {
-    user: belongsTo('User'),  // Creates user_id column
+    posts: hasMany('Post'),  // User has many posts (inverse of Post.author)
   },
 })
 ```
@@ -110,11 +101,11 @@ export const postTags = sqliteTable('post_tags', {
 
 ## Optional Relations
 
-By default, `belongsTo` creates a required foreign key. Make it optional:
+By default, `hasOne` creates a required foreign key. Make it optional:
 
 ```typescript
 relations: {
-  category: belongsTo('Category').optional(),  // category_id can be null
+  category: hasOne('Category').optional(),  // category_id can be null
 }
 ```
 
@@ -172,8 +163,8 @@ export const Order = defineEntity('Order', {
     status: text().default('pending'),
   },
   relations: {
-    customer: belongsTo('Customer'),
-    shippingAddress: belongsTo('Address').optional(),
+    customer: hasOne('Customer'),
+    shippingAddress: hasOne('Address').optional(),
     items: hasMany('OrderItem'),
   },
 })
@@ -184,7 +175,7 @@ export const Product = defineEntity('Product', {
     price: number().required().positive(),
   },
   relations: {
-    category: belongsTo('Category'),
+    category: hasOne('Category'),
     orderItems: hasMany('OrderItem'),
   },
 })
@@ -195,8 +186,8 @@ export const OrderItem = defineEntity('OrderItem', {
     unitPrice: number().required(),
   },
   relations: {
-    order: belongsTo('Order'),
-    product: belongsTo('Product'),
+    order: hasOne('Order'),
+    product: hasOne('Product'),
   },
 })
 ```

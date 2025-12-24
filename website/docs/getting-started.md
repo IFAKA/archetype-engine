@@ -63,8 +63,12 @@ npx archetype generate
 | `npx archetype init` | Create config, entities folder, and infrastructure |
 | `npx archetype init --yes` | Quick setup with SQLite defaults |
 | `npx archetype init --headless` | Setup without database (for edge/serverless) |
-| `npx archetype generate` | Generate code from entity definitions |
+| `npx archetype generate` | Generate code from `archetype.config.ts` |
+| `npx archetype generate manifest.json` | Generate code from JSON manifest |
+| `npx archetype validate manifest.json --json` | Validate JSON manifest before generating |
 | `npx archetype view` | Open ERD diagram in browser |
+
+See [JSON Manifest](/docs/json-manifest) for the AI-optimized workflow using a single JSON file.
 
 ## Project Structure
 
