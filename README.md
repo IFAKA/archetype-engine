@@ -24,6 +24,9 @@ Run `npx archetype generate` → get:
 - ✅ **tRPC routers** (CRUD + pagination + filters)
 - ✅ **Zod validation** (runtime safety)
 - ✅ **React hooks** (useProduct, useCreateProduct, etc.)
+- ✅ **Vitest tests** (comprehensive test suites)
+- ✅ **OpenAPI docs** (Swagger UI + API docs)
+- ✅ **Seed data** (realistic sample data)
 
 ---
 
@@ -88,14 +91,25 @@ generated/
 │   │                          #   - update, updateMany
 │   │                          #   - remove, removeMany
 │   └── index.ts               # Router aggregation
-└── hooks/
-    └── useProduct.ts          # React Query hooks:
-                               #   - useProducts(), useProduct(id)
-                               #   - useCreateProduct(), useUpdateProduct()
-                               #   - useRemoveProduct(), etc.
+├── hooks/
+│   └── useProduct.ts          # React Query hooks:
+│                              #   - useProducts(), useProduct(id)
+│                              #   - useCreateProduct(), useUpdateProduct()
+│                              #   - useRemoveProduct(), etc.
+├── tests/                     # 🆕 Auto-generated tests
+│   ├── product.test.ts        #   - CRUD operation tests
+│   └── setup.ts               #   - Validation & auth tests
+├── docs/                      # 🆕 Auto-generated API docs
+│   ├── openapi.json           #   - OpenAPI 3.0 specification
+│   ├── swagger.html           #   - Interactive Swagger UI
+│   └── API.md                 #   - Markdown documentation
+└── seeds/                     # 🆕 Auto-generated seed data
+    ├── product.ts             #   - Realistic sample data
+    ├── index.ts               #   - Dependency management
+    └── run.ts                 #   - CLI seed script
 ```
 
-**15 lines of entity code → 400+ lines of production-ready backend.**
+**15 lines of entity code → 1,400+ lines of production-ready backend.**
 
 ### Live Example
 
@@ -148,6 +162,9 @@ No API boilerplate. No manual validation. No CRUD repetition. Just works.
 - 📊 **Auto ERD** - Visual database diagrams with `npx archetype view`
 - 🌍 **i18n Ready** - Multi-language support for generated code
 - ⚡ **Fast** - Generate 1000+ lines of code in seconds
+- 🧪 **Auto-Generated Tests** - Comprehensive Vitest test suites with validation, auth, and CRUD tests
+- 📖 **Auto-Generated Docs** - OpenAPI 3.0 specs + interactive Swagger UI
+- 🌱 **Auto-Generated Seeds** - Realistic sample data with smart field mapping
 
 ## Use Cases
 
@@ -206,10 +223,14 @@ Archetype generates the **missing backend layer**:
 - [x] Batch operations (createMany, updateMany, removeMany)
 - [x] Computed fields
 - [x] Enum support
+- [x] Test generator (Vitest)
+- [x] API documentation generator (OpenAPI + Swagger)
+- [x] Seed data generator
+- [ ] E2E test generator (Playwright) (Q1 2026)
+- [ ] Admin UI generator (Q1 2026)
 - [ ] Multi-tenancy utilities (Q1 2026)
-- [ ] RBAC/permissions framework (Q1 2026)
-- [ ] Rate limiting (Q2 2026)
-- [ ] Admin UI generator (Q2 2026)
+- [ ] RBAC/permissions framework (Q2 2026)
+- [ ] GraphQL template (Q2 2026)
 
 ---
 
