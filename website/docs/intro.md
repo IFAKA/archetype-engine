@@ -21,10 +21,13 @@ const User = defineEntity('User', {
 ```
 // You get this
 generated/
-├── db/schema.ts        → Drizzle tables
-├── schemas/user.ts     → Zod validation
+├── db/schema.ts         → Drizzle tables
+├── schemas/user.ts      → Zod validation
 ├── trpc/routers/user.ts → CRUD API
-└── hooks/useUser.ts    → React hooks
+├── hooks/useUser.ts     → React hooks
+├── tests/user.test.ts   → Comprehensive tests
+├── docs/openapi.json    → API documentation
+└── seeds/user.ts        → Sample data
 ```
 
 ---
