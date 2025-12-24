@@ -21,6 +21,18 @@ export function SearchModal({ onClose }: SearchModalProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
+  const selectedItemRefs = useRef<(HTMLAnchorElement | null)[]>([])
+
+  // Scroll selected item into view
+  useEffect(() => {
+    const selectedElement = selectedItemRefs.current[selectedIndex]
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
+    }
+  }, [selectedIndex])
 
   // Load search index
   useEffect(() => {
@@ -144,6 +156,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
           {results.map((result, index) => (
             <a
               key={result.id}
+              ref={el => { selectedItemRefs.current[index] = el }}
               href={result.path}
               className={`${styles.result} ${index === selectedIndex ? styles.selected : ''}`}
               onMouseEnter={() => setSelectedIndex(index)}
