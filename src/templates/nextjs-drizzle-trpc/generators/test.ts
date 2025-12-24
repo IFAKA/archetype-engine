@@ -197,12 +197,14 @@ function generateEntityTest(entity: EntityIR, manifest: ManifestIR): string {
   // Imports
   lines.push(`import { describe, it, expect, beforeEach } from 'vitest'`)
   lines.push(`import { appRouter } from '../trpc/routers'`)
+  lines.push(`import { db } from '@/server/db'`)
   lines.push(``)
   
   // Mock contexts
   if (hasAuth) {
     lines.push(`// Mock authenticated context`)
     lines.push(`const mockAuthContext = {`)
+    lines.push(`  db,`)
     lines.push(`  session: {`)
     lines.push(`    user: { id: 'test-user-123', email: 'test@example.com', name: 'Test User' }`)
     lines.push(`  }`)
@@ -212,6 +214,7 @@ function generateEntityTest(entity: EntityIR, manifest: ManifestIR): string {
   
   lines.push(`// Mock unauthenticated context`)
   lines.push(`const mockPublicContext = {`)
+  lines.push(`  db,`)
   lines.push(`  session: null`)
   lines.push(`}`)
   lines.push(``)
