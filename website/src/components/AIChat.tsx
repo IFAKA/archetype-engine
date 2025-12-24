@@ -237,7 +237,12 @@ CRITICAL RULES:
       <div className={styles.container}>
         <div className={styles.header}>
           <div className={styles.headerTitle}>
-            <span className={styles.icon}>🤖</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+              <path d="M20 3v4"/>
+              <path d="M22 5h-4"/>
+              <path d="M4 13a8 8 0 0 1 7.5-7.95"/>
+            </svg>
             AI Documentation Assistant
           </div>
           <button className={styles.closeButton} onClick={onClose}>✕</button>
@@ -272,7 +277,14 @@ CRITICAL RULES:
               </>
             ) : (
               <>
-                <div className={styles.welcomeIcon}>💬</div>
+                <div className={styles.welcomeIcon}>
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--ifm-color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                    <path d="M20 3v4"/>
+                    <path d="M22 5h-4"/>
+                    <path d="M4 13a8 8 0 0 1 7.5-7.95"/>
+                  </svg>
+                </div>
                 <h3>Chat with AI Assistant</h3>
                 <p>Get instant answers about Archetype from our AI assistant powered by Llama 3.2</p>
                 <ul className={styles.featureList}>
@@ -303,7 +315,19 @@ CRITICAL RULES:
                   className={`${styles.message} ${msg.role === 'user' ? styles.userMessage : styles.assistantMessage}`}
                 >
                   <div className={styles.messageIcon}>
-                    {msg.role === 'user' ? '👤' : '🤖'}
+                    {msg.role === 'user' ? (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    ) : (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                        <path d="M20 3v4"/>
+                        <path d="M22 5h-4"/>
+                        <path d="M4 13a8 8 0 0 1 7.5-7.95"/>
+                      </svg>
+                    )}
                   </div>
                   <div className={styles.messageContent}>
                     {msg.role === 'assistant' ? (
@@ -318,7 +342,14 @@ CRITICAL RULES:
               ))}
               {thinking && (
                 <div className={`${styles.message} ${styles.assistantMessage}`}>
-                  <div className={styles.messageIcon}>🤖</div>
+                  <div className={styles.messageIcon}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                      <path d="M20 3v4"/>
+                      <path d="M22 5h-4"/>
+                      <path d="M4 13a8 8 0 0 1 7.5-7.95"/>
+                    </svg>
+                  </div>
                   <div className={styles.messageContent}>
                     <div className={styles.thinkingDots}>
                       <span>.</span><span>.</span><span>.</span>

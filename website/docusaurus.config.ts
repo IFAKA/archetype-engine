@@ -66,6 +66,10 @@ const config: Config = {
           label: 'Docs',
         },
         {
+          type: 'search',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/ifaka/archetype-engine',
           label: 'GitHub',
           position: 'right',

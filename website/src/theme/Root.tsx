@@ -43,11 +43,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
           background: 'var(--ifm-color-primary)',
           color: 'white',
           border: 'none',
-          fontSize: '24px',
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           transition: 'all 0.2s',
           zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
         onMouseOver={(e) => {
           e.currentTarget.style.transform = 'scale(1.1)'
@@ -59,7 +61,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
         }}
         title="Chat with AI Assistant (Cmd+Shift+K)"
       >
-        🤖
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+          <path d="M20 3v4"/>
+          <path d="M22 5h-4"/>
+          <path d="M4 13a8 8 0 0 1 7.5-7.95"/>
+        </svg>
       </button>
     </>
   )
