@@ -445,7 +445,7 @@ import { defineEntity, enumField } from 'archetype-engine'
 
 const Post = defineEntity('Post', {
   fields: {
-    status: enumField(['draft', 'published', 'archived'] as const)
+    status: enumField('draft', 'published', 'archived')
       .required()
       .default('draft'),
   },
@@ -453,7 +453,7 @@ const Post = defineEntity('Post', {
 
 const Order = defineEntity('Order', {
   fields: {
-    priority: enumField(['low', 'medium', 'high'] as const)
+    priority: enumField('low', 'medium', 'high')
       .default('medium'),
   },
 })
@@ -490,7 +490,7 @@ export const postCreateSchema = z.object({
 const Order = defineEntity('Order', {
   fields: {
     total: number().required(),
-    status: enumField(['pending', 'paid', 'shipped'] as const),
+    status: enumField('pending', 'paid', 'shipped'),
   },
   hooks: true,  // Enable all hooks
   // Or granular: hooks: { beforeCreate: true, afterCreate: true }

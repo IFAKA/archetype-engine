@@ -10,7 +10,7 @@ describe('Enum Fields', () => {
   const Post = defineEntity('Post', {
     fields: {
       title: text().required(),
-      status: enumField(['draft', 'published', 'archived'] as const)
+      status: enumField('draft', 'published', 'archived')
         .required()
         .default('draft'),
     },
@@ -19,17 +19,17 @@ describe('Enum Fields', () => {
   const Order = defineEntity('Order', {
     fields: {
       orderNumber: text().required(),
-      status: enumField(['pending', 'processing', 'shipped', 'delivered', 'cancelled'] as const)
+      status: enumField('pending', 'processing', 'shipped', 'delivered', 'cancelled')
         .required()
         .default('pending'),
-      priority: enumField(['low', 'medium', 'high'] as const)
+      priority: enumField('low', 'medium', 'high')
         .default('medium'),
     },
   })
 
   describe('Field Builder', () => {
     it('creates enum field config', () => {
-      const status = enumField(['draft', 'published', 'archived'] as const)
+      const status = enumField('draft', 'published', 'archived')
 
       expect(status._config.type).toBe('enum')
       expect(status._config.enumValues).toEqual(['draft', 'published', 'archived'])
@@ -37,25 +37,25 @@ describe('Enum Fields', () => {
     })
 
     it('supports required() method', () => {
-      const status = enumField(['active', 'inactive'] as const).required()
+      const status = enumField('active', 'inactive').required()
 
       expect(status._config.required).toBe(true)
     })
 
     it('supports default() method', () => {
-      const status = enumField(['active', 'inactive'] as const).default('active')
+      const status = enumField('active', 'inactive').default('active')
 
       expect(status._config.default).toBe('active')
     })
 
     it('supports label() method', () => {
-      const status = enumField(['active', 'inactive'] as const).label('Account Status')
+      const status = enumField('active', 'inactive').label('Account Status')
 
       expect(status._config.label).toBe('Account Status')
     })
 
     it('supports unique() method', () => {
-      const code = enumField(['A', 'B', 'C'] as const).unique()
+      const code = enumField('A', 'B', 'C').unique()
 
       expect(code._config.unique).toBe(true)
     })

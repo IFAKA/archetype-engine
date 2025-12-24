@@ -73,7 +73,7 @@ export interface DateFieldBuilder extends BaseFieldBuilder<DateFieldBuilder> {
 
 export interface EnumFieldBuilder<T extends readonly string[]> extends BaseFieldBuilder<EnumFieldBuilder<T>> {
   /** Set the default value (must be one of the enum values) */
-  default(value: T[number]): EnumFieldBuilder<T>
+  default(value: NoInfer<T[number]>): EnumFieldBuilder<T>
 }
 
 export interface ComputedFieldBuilder {
@@ -192,7 +192,7 @@ function createEnumFieldBuilder<T extends readonly string[]>(config: FieldConfig
     required: () => createEnumFieldBuilder({ ...config, required: true }),
     optional: () => createEnumFieldBuilder({ ...config, required: false }),
     unique: () => createEnumFieldBuilder({ ...config, unique: true }),
-    default: (value: T[number]) => createEnumFieldBuilder({ ...config, default: value }),
+    default: (value: NoInfer<T[number]>) => createEnumFieldBuilder({ ...config, default: value }),
     label: (value: string) => createEnumFieldBuilder({ ...config, label: value }),
   }
 }
@@ -290,26 +290,26 @@ export function date(): DateFieldBuilder {
  * Enum fields create native database enum types (PostgreSQL) or
  * CHECK constraints (SQLite/MySQL) and generate proper Zod enums.
  *
- * @param values - Array of allowed string values (use `as const` for type safety)
+ * @param values - Allowed string values (automatically inferred as readonly)
  * @returns EnumFieldBuilder with chainable methods
  *
  * @example
  * ```typescript
- * // Basic enum
- * status: enumField(['draft', 'published', 'archived'])
+ * // Basic enum (no 'as const' needed!)
+ * status: enumField('draft', 'published', 'archived')
  *
- * // With type safety (recommended)
- * status: enumField(['draft', 'published', 'archived'] as const)
+ * // With default
+ * status: enumField('draft', 'published', 'archived')
  *   .required()
  *   .default('draft')
  *
- * // Order status with default
- * orderStatus: enumField(['pending', 'processing', 'shipped', 'delivered'] as const)
+ * // Order status
+ * orderStatus: enumField('pending', 'processing', 'shipped', 'delivered')
  *   .required()
  *   .default('pending')
  * ```
  */
-export function enumField<T extends readonly string[]>(values: T): EnumFieldBuilder<T> {
+export function enumField<const T extends readonly string[]>(...values: T): EnumFieldBuilder<T> {
   return createEnumFieldBuilder({
     type: 'enum',
     required: false,

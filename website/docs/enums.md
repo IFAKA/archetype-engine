@@ -13,14 +13,14 @@ import { defineEntity, enumField } from 'archetype-engine'
 
 export const Post = defineEntity('Post', {
   fields: {
-    status: enumField(['draft', 'published', 'archived'] as const)
+    status: enumField('draft', 'published', 'archived')
       .required()
       .default('draft'),
   },
 })
 ```
 
-Always use `as const` for proper type inference.
+Values are automatically inferred as readonly literal types - no need for `as const`!
 
 ## Methods
 
@@ -73,14 +73,14 @@ export const postCreateSchema = z.object({
 ```typescript
 export const Order = defineEntity('Order', {
   fields: {
-    status: enumField([
+    status: enumField(
       'pending',
       'confirmed',
       'processing',
       'shipped',
       'delivered',
-      'cancelled',
-    ] as const)
+      'cancelled'
+    )
       .required()
       .default('pending'),
   },
@@ -92,7 +92,7 @@ export const Order = defineEntity('Order', {
 ```typescript
 export const Task = defineEntity('Task', {
   fields: {
-    priority: enumField(['low', 'medium', 'high', 'urgent'] as const)
+    priority: enumField('low', 'medium', 'high', 'urgent')
       .default('medium'),
   },
 })
@@ -103,7 +103,7 @@ export const Task = defineEntity('Task', {
 ```typescript
 export const User = defineEntity('User', {
   fields: {
-    role: enumField(['user', 'moderator', 'admin'] as const)
+    role: enumField('user', 'moderator', 'admin')
       .required()
       .default('user'),
   },
@@ -115,13 +115,13 @@ export const User = defineEntity('User', {
 ```typescript
 export const Payment = defineEntity('Payment', {
   fields: {
-    status: enumField([
+    status: enumField(
       'pending',
       'processing',
       'succeeded',
       'failed',
-      'refunded',
-    ] as const)
+      'refunded'
+    )
       .required()
       .default('pending'),
   },

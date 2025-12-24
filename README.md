@@ -104,7 +104,7 @@ generated/
 const Order = defineEntity('Order', {
   fields: {
     orderNumber: text().required().unique(),
-    status: enumField(['pending', 'paid', 'shipped'] as const),
+    status: enumField('pending', 'paid', 'shipped'),
     total: number().required().positive(),
   },
   relations: {
