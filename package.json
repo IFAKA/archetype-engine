@@ -1,6 +1,6 @@
 {
   "name": "archetype-engine",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Type-safe backend generator for Next.js. Define entities once, get Drizzle schemas, tRPC APIs, Zod validation, and React hooks instantly.",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
