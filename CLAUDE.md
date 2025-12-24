@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## IMPORTANT: When Working in User Projects
+
+If you are in a user's project (NOT the archetype-engine repo itself), **look for a `CLAUDE.md` file in the project root**.
+
+When `npx archetype init` runs, it generates a `CLAUDE.md` file with project-specific rules about:
+- Which files you can/cannot edit (NEVER edit `generated/`)
+- The correct workflow for modifying entities
+- Available commands and examples
+
+**If you find a CLAUDE.md in the project root, follow those rules instead of the ones below.**
+
+The rules below are for developing the archetype-engine library itself.
+
 ## Build Commands
 
 ```bash
@@ -18,8 +31,83 @@ npx archetype init --yes              # Quick setup with defaults (SQLite)
 npx archetype init --headless         # Quick setup for headless mode (no database)
 npx archetype generate                # Generate code from entities
 npx archetype generate path/to/config.ts  # Use custom config
+npx archetype generate manifest.json  # Generate from JSON (AI-optimized)
+npx archetype validate manifest.json --json  # Validate JSON manifest
 npx archetype view                    # View ERD in browser
 ```
+
+## AI-Optimized Workflow (⚡ Faster for Claude Code)
+
+When the user asks to create entities or generate a backend, prefer this **single-command workflow** instead of creating multiple TypeScript files:
+
+### Method 1: JSON Manifest (Recommended for Full Apps)
+
+Create a `manifest.json` with all entities and generate everything in one step:
+
+```bash
+# 1. Create manifest.json with complete app structure
+cat > manifest.json << 'EOF'
+{
+  "entities": [
+    {
+      "name": "User",
+      "fields": {
+        "email": { "type": "text", "email": true, "required": true, "unique": true },
+        "name": { "type": "text", "required": true }
+      }
+    },
+    {
+      "name": "Post",
+      "fields": {
+        "title": { "type": "text", "required": true, "min": 1, "max": 200 },
+        "content": { "type": "text", "required": true },
+        "published": { "type": "boolean", "default": false }
+      },
+      "relations": {
+        "author": { "type": "hasOne", "entity": "User" }
+      },
+      "behaviors": {
+        "timestamps": true
+      },
+      "protected": "write"
+    }
+  ],
+  "database": {
+    "type": "sqlite",
+    "file": "./app.db"
+  }
+}
+EOF
+
+# 2. Generate all code
+npx archetype generate manifest.json
+
+# 3. Push schema and run
+npx drizzle-kit push && npm run dev
+```
+
+**Why this is 10x faster:**
+- ✅ One file instead of creating `archetype.config.ts` + multiple entity files
+- ✅ One command instead of `init` + `generate`
+- ✅ No need to write TypeScript syntax
+- ✅ Easy to validate: `npx archetype validate manifest.json --json`
+
+### Method 2: Traditional Files (Use for Incremental Changes)
+
+Only use the traditional TypeScript approach when:
+- User wants to modify one existing entity
+- Adding fields to an existing setup
+- User explicitly asks for TypeScript files
+
+### When to Use Each Method
+
+| Scenario | Use |
+|----------|-----|
+| "Create a blog with users and posts" | JSON manifest |
+| "Build an e-commerce app" | JSON manifest |
+| "Add a comment entity" | JSON manifest (update existing) |
+| "Change User.email to unique" | Edit entity file OR update manifest |
+| User asks for TypeScript explicitly | Traditional files |
 
 ## Quick Start
 

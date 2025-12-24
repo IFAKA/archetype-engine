@@ -1,0 +1,199 @@
+# Archetype Engine - AI Assistant Rules
+
+## Overview
+This project uses **Archetype Engine** to generate backend code from entity definitions.
+You are working in a project that follows the Archetype workflow.
+
+## Critical Rules
+
+### 🚫 NEVER Edit Generated Code
+- **NEVER** modify files in `generated/` directory
+- **NEVER** edit `generated/db/schema.ts`, `generated/trpc/routers/`, or `generated/hooks/`
+- Generated code is **read-only** - it gets overwritten on next generation
+
+### ✅ Always Edit Source Files Instead
+- To change database schema: Edit `archetype/entities/*.ts`
+- To add/modify fields: Edit entity definitions
+- To change relations: Edit entity relations
+- To add validation: Edit field validators in entities
+
+## Correct Workflow
+
+### Adding/Modifying Entities
+
+**Option 1: TypeScript Files (Incremental Changes)**
+```typescript
+// Edit: archetype/entities/user.ts
+import { defineEntity, text, number } from 'archetype-engine'
+
+export const User = defineEntity('User', {
+  fields: {
+    email: text().required().unique().email(),
+    name: text().required().min(2),
+    age: number().optional().min(0),
+  },
+})
+```
+
+**Option 2: JSON Manifest (Full App Setup)**
+```json
+// Edit: manifest.json
+{
+  "entities": [
+    {
+      "name": "User",
+      "fields": {
+        "email": { "type": "text", "email": true, "required": true, "unique": true },
+        "name": { "type": "text", "required": true, "min": 2 }
+      }
+    }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" }
+}
+```
+
+### After Editing Entities
+1. Run: `npm run archetype:generate` (or `npx archetype generate`)
+2. Review changes in `generated/`
+3. Run: `npm run db:push` to update database schema
+
+### User-Editable Directories
+- `archetype/entities/` - Entity definitions ✅
+- `archetype.config.ts` - Configuration ✅
+- `src/app/` - Next.js pages and components ✅
+- `src/components/` - React components ✅
+- `src/lib/` - Utility functions ✅
+- `generated/hooks/{entity}.ts` - Hook implementations (if hooks enabled) ✅
+- `drizzle.config.ts` - Drizzle configuration ✅
+
+### Read-Only Directories
+- `generated/db/` - Generated database schemas ❌
+- `generated/trpc/` - Generated tRPC routers ❌
+- `generated/schemas/` - Generated Zod schemas ❌
+- `generated/hooks/use{Entity}.ts` - Generated React hooks ❌
+- `generated/erd.md` - Generated ERD diagram ❌
+
+## Common Tasks
+
+### Add a New Field
+1. Edit the entity file in `archetype/entities/{entity}.ts`
+2. Add the field using field builders: `text()`, `number()`, `boolean()`, `date()`
+3. Run `npm run archetype:generate`
+4. Run `npm run db:push`
+
+### Add a Relation
+1. Edit entity file: add to `relations` object
+2. Use: `hasOne('Entity')`, `hasMany('Entity')`, or `belongsToMany('Entity')`
+3. Run `npm run archetype:generate`
+4. Run `npm run db:push`
+
+### Enable Authentication
+1. Edit `archetype.config.ts`:
+   ```typescript
+   auth: {
+     enabled: true,
+     providers: ['credentials', 'google'],
+   }
+   ```
+2. Run `npm run archetype:generate`
+3. Configure env vars in `.env.local`
+
+### Add CRUD Hooks (Business Logic)
+1. Edit entity: `hooks: true` or `hooks: { beforeCreate: true, afterCreate: true }`
+2. Run `npm run archetype:generate`
+3. Edit `generated/hooks/{entity}.ts` to implement logic
+
+## Technology Stack
+- **Database ORM**: Drizzle (generated schemas in `generated/db/`)
+- **API Layer**: tRPC (generated routers in `generated/trpc/`)
+- **Validation**: Zod (generated schemas in `generated/schemas/`)
+- **React Hooks**: TanStack Query + tRPC hooks (generated in `generated/hooks/`)
+- **Auth**: NextAuth v5 (if enabled)
+
+## File References
+When discussing code, use `file:line` format: `archetype/entities/user.ts:12`
+
+## When User Asks to "Add Backend" or "Create API"
+1. **Ask which approach they prefer**:
+   - Quick setup: Create `manifest.json` + run `npx archetype generate manifest.json`
+   - Incremental: Create/edit entity files in `archetype/entities/`
+
+2. **For new projects**: Recommend `manifest.json` (faster, simpler)
+3. **For existing projects**: Edit entity files directly
+
+## Commands Reference
+```bash
+# Generate code from entities
+npm run archetype:generate
+
+# View ERD diagram
+npm run archetype:view
+
+# Push schema to database (full mode)
+npm run db:push
+
+# Open Drizzle Studio (full mode)
+npm run db:studio
+
+# Validate manifest
+npx archetype validate manifest.json --json
+```
+
+## Examples
+
+### ❌ Wrong: Editing Generated Code
+```typescript
+// DON'T DO THIS - will be overwritten
+// File: generated/trpc/routers/user.ts
+export const userRouter = router({
+  list: publicProcedure.query(async () => {
+    // Adding custom logic here - WRONG!
+  })
+})
+```
+
+### ✅ Correct: Using Hooks for Business Logic
+```typescript
+// DO THIS - edit hook implementation
+// File: generated/hooks/user.ts
+export const userHooks: UserHooks = {
+  async beforeCreate(input, ctx) {
+    // Custom validation
+    if (input.email.includes('spam')) {
+      throw new Error('Invalid email')
+    }
+    return input
+  },
+  async afterCreate(record, ctx) {
+    // Send welcome email
+    await sendWelcomeEmail(record.email)
+  },
+}
+```
+
+### ✅ Correct: Modifying Entity Definition
+```typescript
+// DO THIS - edit source entity
+// File: archetype/entities/user.ts
+import { defineEntity, text } from 'archetype-engine'
+
+export const User = defineEntity('User', {
+  fields: {
+    email: text().required().unique().email(),
+    // Add new field here
+    phone: text().optional().regex(/^\+?[1-9]\d{1,14}$/),
+  },
+})
+```
+
+## Questions to Ask Before Acting
+1. Is this modifying generated code? → Edit entity definition instead
+2. Is this business logic? → Use hooks system
+3. Is this a new entity? → Create in `archetype/entities/` or update `manifest.json`
+4. Is this UI/frontend? → Edit normally (not Archetype-managed)
+
+## Summary
+- **Source of truth**: Entity definitions in `archetype/entities/` or `manifest.json`
+- **Generated code**: Read-only, regenerated on every `archetype generate`
+- **Workflow**: Edit entities → Generate → Push to DB → Develop frontend
+- **Business logic**: Use hooks system, not direct router edits

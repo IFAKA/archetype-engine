@@ -17,7 +17,8 @@
     }
   },
   "bin": {
-    "archetype": "dist/src/cli.js"
+    "archetype": "dist/src/cli.js",
+    "archetype-mcp": "dist/src/mcp-server.js"
   },
   "files": [
     "dist",

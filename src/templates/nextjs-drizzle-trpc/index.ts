@@ -22,6 +22,9 @@ import { apiGenerator } from './generators/api'
 import { hooksGenerator } from './generators/hooks'
 import { crudHooksGenerator } from './generators/crud-hooks'
 import { i18nGenerator } from './generators/i18n'
+import { testGenerator } from './generators/test'
+import { openapiGenerator } from './generators/openapi'
+import { seedGenerator } from './generators/seed'
 
 /**
  * Template definition for Next.js + Drizzle + tRPC stack
@@ -33,7 +36,11 @@ import { i18nGenerator } from './generators/i18n'
  * 4. serviceGenerator - API client (only for external entities)
  * 5. apiGenerator - tRPC routers (adapts to source type)
  * 6. hooksGenerator - React hooks (always runs)
- * 7. i18nGenerator - Translation files (only if i18n configured)
+ * 7. crudHooksGenerator - Business logic hooks (only if hooks enabled)
+ * 8. i18nGenerator - Translation files (only if i18n configured)
+ * 9. testGenerator - Vitest test suites (always runs)
+ * 10. openapiGenerator - OpenAPI spec and Swagger UI (always runs)
+ * 11. seedGenerator - Seed data for development (always runs)
  */
 export const template: Template = {
   meta: {
@@ -66,6 +73,9 @@ export const template: Template = {
     hooksGenerator,       // Always runs
     crudHooksGenerator,   // Only if hooks enabled
     i18nGenerator,        // Only if i18n enabled
+    testGenerator,        // Always runs - generates test suites
+    openapiGenerator,     // Always runs - generates API docs
+    seedGenerator,        // Always runs - generates seed data
   ],
 }
 

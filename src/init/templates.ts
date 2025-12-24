@@ -541,6 +541,421 @@ dist/
 `
 }
 
+// CLAUDE.md - Rules for Claude Code in user projects
+export function getClaudeMdTemplate(): string {
+  return `# Archetype Engine Project - Rules for Claude Code
+
+## Overview
+This is an **Archetype Engine** project. Archetype generates backend code (Drizzle schemas, tRPC routers, Zod validation, React hooks) from entity definitions.
+
+**CRITICAL:** Code in \`generated/\` is auto-generated and **MUST NOT** be edited manually.
+
+## 🚫 NEVER Edit These Directories
+
+- \`generated/db/\` - Database schemas (regenerated on each \`archetype generate\`)
+- \`generated/trpc/\` - tRPC routers (regenerated)
+- \`generated/schemas/\` - Zod validation schemas (regenerated)
+- \`generated/hooks/use*.ts\` - React hooks (regenerated)
+- \`generated/erd.md\` - ERD diagram (regenerated)
+
+**Why?** These files are overwritten every time \`npm run archetype:generate\` runs.
+
+## ✅ ALWAYS Edit These Instead
+
+- \`archetype/entities/\` - Entity definitions (source of truth)
+- \`archetype.config.ts\` - Archetype configuration
+- \`manifest.json\` - Alternative to entity files (JSON format)
+- \`src/app/\`, \`src/components/\` - Next.js UI code
+- \`generated/hooks/{entity}.ts\` - Hook implementations (if hooks enabled)
+
+## Correct Workflow
+
+### When User Asks to Add/Modify Entities
+
+**Option 1: JSON Manifest (Recommended - Faster)**
+
+\`\`\`bash
+# 1. Create/update manifest.json
+cat > manifest.json << 'EOF'
+{
+  "entities": [
+    {
+      "name": "Product",
+      "fields": {
+        "name": { "type": "text", "required": true, "min": 1, "max": 200 },
+        "price": { "type": "number", "required": true, "min": 0 },
+        "stock": { "type": "number", "required": true, "integer": true, "min": 0 }
+      },
+      "behaviors": {
+        "timestamps": true
+      }
+    }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" }
+}
+EOF
+
+# 2. Generate code
+npx archetype generate manifest.json
+
+# 3. Push to database
+npx drizzle-kit push
+\`\`\`
+
+**Option 2: TypeScript Entity Files (For Incremental Changes)**
+
+\`\`\`typescript
+// Edit: archetype/entities/product.ts
+import { defineEntity, text, number } from 'archetype-engine'
+
+export const Product = defineEntity('Product', {
+  fields: {
+    name: text().required().min(1).max(200),
+    price: number().required().positive(),
+    stock: number().required().integer().min(0),
+  },
+  behaviors: {
+    timestamps: true,
+  },
+})
+\`\`\`
+
+\`\`\`bash
+# Generate code
+npm run archetype:generate
+
+# Push to database
+npm run db:push
+\`\`\`
+
+### When to Use Each Method
+
+| User Request | Use |
+|-------------|-----|
+| "Create a blog with users and posts" | JSON manifest |
+| "Build an e-commerce app" | JSON manifest |
+| "Add a comment entity" | JSON manifest or entity file |
+| "Add a field to User" | Edit entity file |
+| "Change email to unique" | Edit entity file |
+
+## Available Commands
+
+\`\`\`bash
+npm run archetype:generate   # Generate code from entities
+npm run archetype:view       # View ERD in browser
+npm run db:push              # Push schema to database
+npm run db:studio            # Open Drizzle Studio
+npx archetype validate manifest.json --json  # Validate manifest
+\`\`\`
+
+## Examples
+
+### ❌ WRONG: Editing Generated Code
+
+\`\`\`typescript
+// File: generated/trpc/routers/product.ts
+// DON'T DO THIS - will be overwritten!
+export const productRouter = router({
+  list: publicProcedure.query(async ({ ctx }) => {
+    // Adding custom logic here ❌
+    const products = await ctx.db.query.products.findMany()
+    return products.filter(p => p.stock > 0) // ❌ WRONG
+  })
+})
+\`\`\`
+
+### ✅ CORRECT: Using Hooks for Business Logic
+
+If the entity has \`hooks: true\`, edit the hook implementation:
+
+\`\`\`typescript
+// File: generated/hooks/product.ts (editable!)
+export const productHooks: ProductHooks = {
+  async beforeCreate(input, ctx) {
+    // Validate stock is positive
+    if (input.stock < 0) {
+      throw new Error('Stock cannot be negative')
+    }
+    return input
+  },
+  
+  async afterCreate(record, ctx) {
+    // Send notification
+    await notifyLowStock(record)
+  },
+}
+\`\`\`
+
+### ✅ CORRECT: Modifying Entity Definition
+
+\`\`\`typescript
+// File: archetype/entities/product.ts
+import { defineEntity, text, number, boolean } from 'archetype-engine'
+
+export const Product = defineEntity('Product', {
+  fields: {
+    name: text().required().min(1).max(200),
+    price: number().required().positive(),
+    stock: number().required().integer().min(0),
+    // Add new field ✅
+    inStock: boolean().default(true),
+  },
+  behaviors: {
+    timestamps: true,
+  },
+})
+\`\`\`
+
+Then run:
+\`\`\`bash
+npm run archetype:generate && npm run db:push
+\`\`\`
+
+## Field Types Reference
+
+- \`text()\` - String with \`.email()\`, \`.url()\`, \`.regex()\`, \`.min()\`, \`.max()\`, \`.oneOf()\`
+- \`number()\` - Numeric with \`.integer()\`, \`.positive()\`, \`.min()\`, \`.max()\`
+- \`boolean()\` - Boolean with \`.default()\`
+- \`date()\` - Date/timestamp with \`.default('now')\`
+
+All fields: \`.required()\`, \`.optional()\`, \`.unique()\`, \`.default()\`, \`.label()\`
+
+## Relations
+
+- \`hasOne('Entity')\` - One-to-one
+- \`hasMany('Entity')\` - One-to-many
+- \`belongsToMany('Entity')\` - Many-to-many
+- \`belongsToMany('Entity').through({ fields: {...} })\` - Many-to-many with pivot data
+
+## Questions to Ask Before Making Changes
+
+1. **Am I editing \`generated/\`?** → STOP. Edit entity definition instead.
+2. **Am I adding business logic?** → Use hooks system, not generated routers.
+3. **Am I creating a new entity?** → Use manifest.json or create entity file.
+4. **Am I modifying UI?** → That's fine, UI code is not Archetype-managed.
+
+## Technology Stack
+
+- **ORM**: Drizzle (schemas in \`generated/db/\`)
+- **API**: tRPC (routers in \`generated/trpc/\`)
+- **Validation**: Zod (schemas in \`generated/schemas/\`)
+- **Frontend**: React hooks (in \`generated/hooks/\`)
+- **Auth**: NextAuth v5 (if enabled)
+
+## Summary
+
+1. **Source of truth**: Entity definitions in \`archetype/entities/\` or \`manifest.json\`
+2. **Generated code**: Read-only, never edit directly
+3. **Workflow**: Edit entities → Generate → Push to DB
+4. **Business logic**: Use hooks, not router edits
+5. **Prefer JSON manifests** for new entities (faster, simpler)
+`
+}
+
+// .cursorrules - AI assistant rules for Archetype projects
+export function getCursorRulesTemplate(): string {
+  return `# Archetype Engine - AI Assistant Rules
+
+## Overview
+This project uses **Archetype Engine** to generate backend code from entity definitions.
+You are working in a project that follows the Archetype workflow.
+
+## Critical Rules
+
+### 🚫 NEVER Edit Generated Code
+- **NEVER** modify files in \`generated/\` directory
+- **NEVER** edit \`generated/db/schema.ts\`, \`generated/trpc/routers/\`, or \`generated/hooks/\`
+- Generated code is **read-only** - it gets overwritten on next generation
+
+### ✅ Always Edit Source Files Instead
+- To change database schema: Edit \`archetype/entities/*.ts\`
+- To add/modify fields: Edit entity definitions
+- To change relations: Edit entity relations
+- To add validation: Edit field validators in entities
+
+## Correct Workflow
+
+### Adding/Modifying Entities
+
+**Option 1: TypeScript Files (Incremental Changes)**
+\`\`\`typescript
+// Edit: archetype/entities/user.ts
+import { defineEntity, text, number } from 'archetype-engine'
+
+export const User = defineEntity('User', {
+  fields: {
+    email: text().required().unique().email(),
+    name: text().required().min(2),
+    age: number().optional().min(0),
+  },
+})
+\`\`\`
+
+**Option 2: JSON Manifest (Full App Setup)**
+\`\`\`json
+// Edit: manifest.json
+{
+  "entities": [
+    {
+      "name": "User",
+      "fields": {
+        "email": { "type": "text", "email": true, "required": true, "unique": true },
+        "name": { "type": "text", "required": true, "min": 2 }
+      }
+    }
+  ],
+  "database": { "type": "sqlite", "file": "./app.db" }
+}
+\`\`\`
+
+### After Editing Entities
+1. Run: \`npm run archetype:generate\` (or \`npx archetype generate\`)
+2. Review changes in \`generated/\`
+3. Run: \`npm run db:push\` to update database schema
+
+### User-Editable Directories
+- \`archetype/entities/\` - Entity definitions ✅
+- \`archetype.config.ts\` - Configuration ✅
+- \`src/app/\` - Next.js pages and components ✅
+- \`src/components/\` - React components ✅
+- \`src/lib/\` - Utility functions ✅
+- \`generated/hooks/{entity}.ts\` - Hook implementations (if hooks enabled) ✅
+- \`drizzle.config.ts\` - Drizzle configuration ✅
+
+### Read-Only Directories
+- \`generated/db/\` - Generated database schemas ❌
+- \`generated/trpc/\` - Generated tRPC routers ❌
+- \`generated/schemas/\` - Generated Zod schemas ❌
+- \`generated/hooks/use{Entity}.ts\` - Generated React hooks ❌
+- \`generated/erd.md\` - Generated ERD diagram ❌
+
+## Common Tasks
+
+### Add a New Field
+1. Edit the entity file in \`archetype/entities/{entity}.ts\`
+2. Add the field using field builders: \`text()\`, \`number()\`, \`boolean()\`, \`date()\`
+3. Run \`npm run archetype:generate\`
+4. Run \`npm run db:push\`
+
+### Add a Relation
+1. Edit entity file: add to \`relations\` object
+2. Use: \`hasOne('Entity')\`, \`hasMany('Entity')\`, or \`belongsToMany('Entity')\`
+3. Run \`npm run archetype:generate\`
+4. Run \`npm run db:push\`
+
+### Enable Authentication
+1. Edit \`archetype.config.ts\`:
+   \`\`\`typescript
+   auth: {
+     enabled: true,
+     providers: ['credentials', 'google'],
+   }
+   \`\`\`
+2. Run \`npm run archetype:generate\`
+3. Configure env vars in \`.env.local\`
+
+### Add CRUD Hooks (Business Logic)
+1. Edit entity: \`hooks: true\` or \`hooks: { beforeCreate: true, afterCreate: true }\`
+2. Run \`npm run archetype:generate\`
+3. Edit \`generated/hooks/{entity}.ts\` to implement logic
+
+## Technology Stack
+- **Database ORM**: Drizzle (generated schemas in \`generated/db/\`)
+- **API Layer**: tRPC (generated routers in \`generated/trpc/\`)
+- **Validation**: Zod (generated schemas in \`generated/schemas/\`)
+- **React Hooks**: TanStack Query + tRPC hooks (generated in \`generated/hooks/\`)
+- **Auth**: NextAuth v5 (if enabled)
+
+## File References
+When discussing code, use \`file:line\` format: \`archetype/entities/user.ts:12\`
+
+## When User Asks to "Add Backend" or "Create API"
+1. **Ask which approach they prefer**:
+   - Quick setup: Create \`manifest.json\` + run \`npx archetype generate manifest.json\`
+   - Incremental: Create/edit entity files in \`archetype/entities/\`
+
+2. **For new projects**: Recommend \`manifest.json\` (faster, simpler)
+3. **For existing projects**: Edit entity files directly
+
+## Commands Reference
+\`\`\`bash
+# Generate code from entities
+npm run archetype:generate
+
+# View ERD diagram
+npm run archetype:view
+
+# Push schema to database (full mode)
+npm run db:push
+
+# Open Drizzle Studio (full mode)
+npm run db:studio
+
+# Validate manifest
+npx archetype validate manifest.json --json
+\`\`\`
+
+## Examples
+
+### ❌ Wrong: Editing Generated Code
+\`\`\`typescript
+// DON'T DO THIS - will be overwritten
+// File: generated/trpc/routers/user.ts
+export const userRouter = router({
+  list: publicProcedure.query(async () => {
+    // Adding custom logic here - WRONG!
+  })
+})
+\`\`\`
+
+### ✅ Correct: Using Hooks for Business Logic
+\`\`\`typescript
+// DO THIS - edit hook implementation
+// File: generated/hooks/user.ts
+export const userHooks: UserHooks = {
+  async beforeCreate(input, ctx) {
+    // Custom validation
+    if (input.email.includes('spam')) {
+      throw new Error('Invalid email')
+    }
+    return input
+  },
+  async afterCreate(record, ctx) {
+    // Send welcome email
+    await sendWelcomeEmail(record.email)
+  },
+}
+\`\`\`
+
+### ✅ Correct: Modifying Entity Definition
+\`\`\`typescript
+// DO THIS - edit source entity
+// File: archetype/entities/user.ts
+import { defineEntity, text } from 'archetype-engine'
+
+export const User = defineEntity('User', {
+  fields: {
+    email: text().required().unique().email(),
+    // Add new field here
+    phone: text().optional().regex(/^\\+?[1-9]\\d{1,14}$/),
+  },
+})
+\`\`\`
+
+## Questions to Ask Before Acting
+1. Is this modifying generated code? → Edit entity definition instead
+2. Is this business logic? → Use hooks system
+3. Is this a new entity? → Create in \`archetype/entities/\` or update \`manifest.json\`
+4. Is this UI/frontend? → Edit normally (not Archetype-managed)
+
+## Summary
+- **Source of truth**: Entity definitions in \`archetype/entities/\` or \`manifest.json\`
+- **Generated code**: Read-only, regenerated on every \`archetype generate\`
+- **Workflow**: Edit entities → Generate → Push to DB → Develop frontend
+- **Business logic**: Use hooks system, not direct router edits
+`
+}
+
 // All template files to create
 export interface TemplateFile {
   path: string
@@ -559,6 +974,9 @@ export function getAllTemplateFiles(config: InitConfig, structure: ProjectStruct
     { path: 'archetype.config.ts', content: getConfigTemplate(config) },
     // Gitignore - always needed
     { path: '.gitignore', content: getGitignoreTemplate() },
+    // AI assistant guidance files
+    { path: 'CLAUDE.md', content: getClaudeMdTemplate() },        // For Claude Code
+    { path: '.cursorrules', content: getCursorRulesTemplate() },  // For Cursor/Windsurf
   ]
 
   if (config.mode === 'headless') {

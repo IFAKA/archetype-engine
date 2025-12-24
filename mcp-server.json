@@ -1,0 +1,211 @@
+{
+  "name": "archetype-engine",
+  "version": "1.0.0",
+  "description": "Generate production-ready backends from entity descriptions. Creates database schemas, tRPC APIs, React hooks, and validation from simple entity definitions.",
+  "tools": [
+    {
+      "name": "archetype_generate_from_description",
+      "description": "Generate a complete backend from a natural language description. This is the main tool - use it when the user describes what they want to build. Examples: 'blog with users and posts', 'e-commerce with products and orders', 'task manager with projects'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Natural language description of the app (e.g., 'blog with users and posts')"
+          },
+          "database": {
+            "type": "string",
+            "enum": ["sqlite", "postgres", "mysql"],
+            "description": "Database type (default: sqlite)",
+            "default": "sqlite"
+          },
+          "outputDir": {
+            "type": "string",
+            "description": "Directory to write files (default: current directory)",
+            "default": "."
+          }
+        },
+        "required": ["description"]
+      }
+    },
+    {
+      "name": "archetype_create_manifest",
+      "description": "Create a manifest.json file with entity definitions. Use this when you have a clear understanding of the entities, fields, and relations needed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entities": {
+            "type": "array",
+            "description": "List of entities to create",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Entity name in PascalCase (e.g., User, BlogPost)"
+                },
+                "fields": {
+                  "type": "object",
+                  "description": "Field definitions (key = field name, value = field config)",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["text", "number", "boolean", "date"],
+                        "description": "Field data type"
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "description": "Whether field is required (default: true)"
+                      },
+                      "unique": {
+                        "type": "boolean",
+                        "description": "Add unique constraint"
+                      },
+                      "email": {
+                        "type": "boolean",
+                        "description": "Validate as email (text only)"
+                      },
+                      "url": {
+                        "type": "boolean",
+                        "description": "Validate as URL (text only)"
+                      },
+                      "min": {
+                        "type": "number",
+                        "description": "Min length (text) or value (number)"
+                      },
+                      "max": {
+                        "type": "number",
+                        "description": "Max length (text) or value (number)"
+                      },
+                      "default": {
+                        "description": "Default value"
+                      }
+                    },
+                    "required": ["type"]
+                  }
+                },
+                "relations": {
+                  "type": "object",
+                  "description": "Relations to other entities",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["hasOne", "hasMany", "belongsToMany"],
+                        "description": "Relation type"
+                      },
+                      "entity": {
+                        "type": "string",
+                        "description": "Target entity name"
+                      }
+                    },
+                    "required": ["type", "entity"]
+                  }
+                },
+                "behaviors": {
+                  "type": "object",
+                  "properties": {
+                    "timestamps": {
+                      "type": "boolean",
+                      "description": "Add createdAt/updatedAt (default: true)"
+                    },
+                    "softDelete": {
+                      "type": "boolean",
+                      "description": "Use soft delete with deletedAt"
+                    }
+                  }
+                },
+                "protected": {
+                  "description": "Auth protection: false (public), true (all protected), 'write' (read public, write protected)"
+                }
+              },
+              "required": ["name", "fields"]
+            }
+          },
+          "database": {
+            "type": "object",
+            "description": "Database configuration",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["sqlite", "postgres", "mysql"],
+                "description": "Database type"
+              },
+              "file": {
+                "type": "string",
+                "description": "SQLite file path (required for sqlite)"
+              },
+              "url": {
+                "type": "string",
+                "description": "Connection URL (for postgres/mysql, use env:VAR_NAME)"
+              }
+            },
+            "required": ["type"]
+          },
+          "auth": {
+            "type": "object",
+            "description": "Authentication configuration",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "providers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["credentials", "google", "github", "discord"]
+                }
+              }
+            }
+          }
+        },
+        "required": ["entities", "database"]
+      }
+    },
+    {
+      "name": "archetype_validate_manifest",
+      "description": "Validate a manifest.json file for errors before generating code.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "manifestPath": {
+            "type": "string",
+            "description": "Path to manifest.json file",
+            "default": "manifest.json"
+          }
+        }
+      }
+    },
+    {
+      "name": "archetype_generate",
+      "description": "Generate code from an existing manifest.json file. Run validate first to check for errors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "manifestPath": {
+            "type": "string",
+            "description": "Path to manifest.json file",
+            "default": "manifest.json"
+          }
+        }
+      }
+    },
+    {
+      "name": "archetype_view_schema",
+      "description": "Generate and view ERD (Entity Relationship Diagram) in browser. Useful to visualize the data model.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "configPath": {
+            "type": "string",
+            "description": "Path to config or manifest file",
+            "default": "manifest.json"
+          }
+        }
+      }
+    }
+  ]
+}

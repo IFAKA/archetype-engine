@@ -513,6 +513,10 @@ async function main() {
   } else if (command === 'init') {
     // Run the TUI init flow
     await init({ yes: yesFlag, headless: headlessFlag })
+  } else if (command === 'mcp') {
+    // Run MCP server
+    const { runMCPServer } = await import('./mcp-server')
+    await runMCPServer()
   } else {
     console.log('Usage:')
     console.log('  archetype init                 - Interactive setup with prompts')
@@ -521,6 +525,7 @@ async function main() {
     console.log('  archetype generate [config]    - Generate code from entities')
     console.log('  archetype validate [config]    - Validate manifest without generating')
     console.log('  archetype view [config]        - View ERD diagram in browser')
+    console.log('  archetype mcp                  - Start MCP server (for Claude Desktop/Code)')
     console.log('')
     console.log('Flags:')
     console.log('  --json                         - Output as JSON (for AI agents)')
