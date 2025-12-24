@@ -151,15 +151,35 @@ export async function runPrompts(): Promise<InitConfig | null> {
   }
 
   const includeExamples = await p.confirm({
-    message: mode === 'headless'
-      ? 'Include example entity (Product with external API)?'
-      : 'Include example entities (Task)?',
+    message: 'Would you like to start with example entities?',
     initialValue: true,
   })
 
   if (p.isCancel(includeExamples)) {
     p.cancel('Setup cancelled.')
     return null
+  }
+
+  let entityTemplateChoice: string | undefined
+
+  if (includeExamples) {
+    const templateChoice = await p.select({
+      message: 'Choose a starter template:',
+      options: [
+        { value: 'simple', label: 'Simple (Task)', hint: 'Single entity to get started' },
+        { value: 'saas', label: 'SaaS Multi-Tenant', hint: 'Workspace, Team, Member' },
+        { value: 'ecommerce', label: 'E-commerce', hint: 'Product, Order, Customer' },
+        { value: 'blog', label: 'Blog/CMS', hint: 'Post, Author, Comment' },
+        { value: 'task', label: 'Task Management', hint: 'Project, Task, Label' },
+      ],
+    })
+
+    if (p.isCancel(templateChoice)) {
+      p.cancel('Setup cancelled.')
+      return null
+    }
+
+    entityTemplateChoice = templateChoice as string
   }
 
   return {
@@ -171,6 +191,7 @@ export async function runPrompts(): Promise<InitConfig | null> {
     authProviders,
     i18n,
     includeExamples: includeExamples as boolean,
+    entityTemplate: entityTemplateChoice,
   }
 }
 
@@ -205,24 +226,49 @@ export function displayConfigSummary(config: InitConfig): void {
 // Display success message and next steps
 export function displaySuccess(config: InitConfig): void {
   const authNote = config.auth
-    ? `\n\nAuth setup:\n  - Copy .env.example to .env.local\n  - Add your OAuth credentials (if using Google/GitHub/Discord)`
+    ? `\n\n📧 Auth setup:\n  - Copy .env.example to .env.local\n  - Add your OAuth credentials (if using Google/GitHub/Discord)\n  - Generate auth secret: npx auth secret`
+    : ''
+
+  const templateNote = config.entityTemplate && config.entityTemplate !== 'simple'
+    ? `\n\n📦 Starter template: ${config.entityTemplate}\n  - Check archetype/entities/ for pre-built entities\n  - Customize them to fit your needs`
     : ''
 
   if (config.mode === 'headless') {
-    p.outro(`Archetype initialized in headless mode!
+    p.outro(`✅ Archetype initialized in headless mode!
 
-Next steps:
-  npx archetype generate    # Generate code from entities
-  npm run dev               # Start development server
+📝 Next steps:
+  1. npx archetype generate     # Generate code from entities
+  2. npm run dev                # Start development server
 
-Note: No database setup needed - entities will use external APIs.${authNote}`)
+💡 Tips:
+  - Add more entities in archetype/entities/
+  - Run 'npx archetype generate' after changes
+  - View ERD: 'npx archetype view'
+  
+Note: No database setup needed - entities will use external APIs.${authNote}${templateNote}
+
+📚 Docs: https://archetype-engine.dev/docs
+🐛 Issues: https://github.com/yourusername/archetype-engine/issues`)
   } else {
-    p.outro(`Archetype initialized!
+    const dbCommand = config.database === 'sqlite' 
+      ? 'npx drizzle-kit push'
+      : 'npx drizzle-kit push  # Make sure DATABASE_URL is set in .env.local'
 
-Next steps:
-  npx archetype generate    # Generate code from entities
-  npx drizzle-kit push      # Create database tables
-  npm run dev               # Start development server${authNote}`)
+    p.outro(`✅ Archetype initialized!
+
+📝 Next steps:
+  1. npx archetype generate     # Generate code from entities
+  2. ${dbCommand}      # Create database tables
+  3. npm run dev                # Start development server
+
+💡 Tips:
+  - Add more entities in archetype/entities/
+  - Run 'npx archetype generate' after entity changes
+  - View ERD: 'npx archetype view'
+  - Open Drizzle Studio: 'npm run db:studio'${authNote}${templateNote}
+
+📚 Docs: https://archetype-engine.dev/docs
+🐛 Issues: https://github.com/yourusername/archetype-engine/issues`)
   }
 }
 

@@ -13,6 +13,7 @@ export interface InitConfig {
   authProviders?: AuthProvider[]  // Selected auth providers
   i18n: string[] | null
   includeExamples: boolean
+  entityTemplate?: string  // Optional - starter template (saas, ecommerce, blog, task)
 }
 
 // Core dependencies (always installed)

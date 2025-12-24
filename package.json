@@ -1,7 +1,7 @@
 {
   "name": "archetype-engine",
   "version": "2.0.0",
-  "description": "Declarative data engine with fluent TypeScript API for safe, synced infrastructure",
+  "description": "Type-safe backend generator for Next.js. Define entities once, get Drizzle schemas, tRPC APIs, Zod validation, and React hooks instantly.",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "exports": {
@@ -50,25 +50,37 @@
     "typescript": ">=5.0.0"
   },
   "keywords": [
-    "declarative",
-    "orm",
-    "safety",
     "nextjs",
+    "backend-generator",
+    "code-generation",
     "drizzle",
     "trpc",
     "zod",
-    "archetype",
-    "code-generation",
+    "react-query",
+    "type-safe",
     "crud",
-    "api",
+    "api-generator",
     "typescript",
-    "ai",
-    "openai",
-    "anthropic",
-    "vercel-ai-sdk",
-    "function-calling",
-    "tool-use"
+    "fullstack",
+    "scaffolding",
+    "boilerplate",
+    "v0",
+    "cursor",
+    "ai-backend",
+    "prisma-alternative",
+    "orm",
+    "schema-first",
+    "declarative",
+    "entity-framework"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/archetype-engine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/archetype-engine/issues"
+  },
+  "homepage": "https://archetype-engine.dev"
 }
