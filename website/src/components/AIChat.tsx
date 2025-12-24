@@ -50,7 +50,7 @@ export function AIChat({ onClose }: AIChatProps) {
   // Load search index for RAG
   useEffect(() => {
     fetch('/search-index.json')
-      .then(r => r.json())
+      .then(r => r.text())
       .then(index => {
         const ms = MiniSearch.loadJSON(index, {
           fields: ['title', 'headings', 'content', 'description'],

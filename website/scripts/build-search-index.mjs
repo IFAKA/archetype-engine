@@ -33,18 +33,38 @@ function extractHeadings(content) {
 }
 
 function cleanContent(content) {
-  // Remove code blocks
+  // Extract code from inline code blocks before removing (preserve function names, etc)
+  const inlineCodeMatches = content.match(/`[^`]+`/g) || []
+  const codeTerms = inlineCodeMatches
+    .map(c => c.replace(/`/g, ''))
+    .filter(c => c.length > 3 && /[a-zA-Z]/.test(c))
+    .join(' ')
+  
+  // Remove code blocks but extract function/method names from them
+  const codeBlockMatches = content.match(/```[\s\S]*?```/g) || []
+  const codeBlockTerms = codeBlockMatches
+    .flatMap(block => {
+      // Extract camelCase/PascalCase identifiers
+      return (block.match(/\b[a-z][a-zA-Z0-9]+\b|\b[A-Z][a-zA-Z0-9]+\b/g) || [])
+        .filter(term => term.length > 3)
+    })
+    .join(' ')
+  
+  // Remove code blocks and inline code
   content = content.replace(/```[\s\S]*?```/g, '')
-  // Remove inline code
   content = content.replace(/`[^`]+`/g, '')
+  
   // Remove markdown links but keep text
   content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  
   // Remove markdown formatting
   content = content.replace(/[*_~]/g, '')
+  
   // Remove multiple spaces
   content = content.replace(/\s+/g, ' ')
   
-  return content.trim()
+  // Combine cleaned content with extracted code terms
+  return `${content.trim()} ${codeTerms} ${codeBlockTerms}`.trim()
 }
 
 function buildSearchIndex() {
@@ -61,9 +81,14 @@ function buildSearchIndex() {
     const fileContent = fs.readFileSync(filePath, 'utf-8')
     const { data, content } = matter(fileContent)
     
-    // Extract first paragraph as description
+    // Extract first meaningful paragraph as description (skip headings and frontmatter)
     const paragraphs = content.split('\n\n')
-    const description = paragraphs.find(p => p.trim() && !p.startsWith('#'))?.slice(0, 200) || ''
+    const description = cleanContent(
+      paragraphs
+        .find(p => p.trim() && !p.startsWith('#') && !p.startsWith('---') && p.length > 20) || 
+      paragraphs[1] || 
+      ''
+    ).slice(0, 300)
     
     // Build doc path for links
     const docPath = '/docs/' + docFiles[i].replace('.md', '')

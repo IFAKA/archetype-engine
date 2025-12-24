@@ -25,7 +25,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
   // Load search index
   useEffect(() => {
     fetch('/search-index.json')
-      .then(r => r.json())
+      .then(r => r.text())
       .then(index => {
         const ms = MiniSearch.loadJSON(index, {
           fields: ['title', 'headings', 'content', 'description'],
