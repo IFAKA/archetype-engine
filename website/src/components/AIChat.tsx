@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import * as webllm from '@mlc-ai/web-llm'
 import MiniSearch from 'minisearch'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import styles from './AIChat.module.css'
 
 interface Message {
@@ -51,7 +53,8 @@ export function AIChat({ onClose }: AIChatProps) {
       .then(r => r.json())
       .then(index => {
         const ms = MiniSearch.loadJSON(index, {
-          fields: ['title', 'headings', 'content', 'description']
+          fields: ['title', 'headings', 'content', 'description'],
+          storeFields: ['title', 'path', 'description']
         })
         setMiniSearch(ms)
       })
@@ -63,7 +66,51 @@ export function AIChat({ onClose }: AIChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat])
 
-  // Initialize WebLLM model
+  // Check if model is already initialized on mount
+  useEffect(() => {
+    const checkExistingEngine = async () => {
+      if (!hasWebGPU) return
+      
+      // Check if there's a cached model in IndexedDB
+      const cacheKey = 'archetype_ai_model_initialized'
+      const wasInitialized = localStorage.getItem(cacheKey)
+      
+      if (wasInitialized === 'true') {
+        // Try to reinitialize silently
+        try {
+          setLoading(true)
+          setLoadingProgress('Reconnecting to cached model...')
+          
+          const newEngine = await webllm.CreateMLCEngine(
+            'Llama-3.2-1B-Instruct-q4f16_1-MLC',
+            {
+              initProgressCallback: (progress) => {
+                // Silent load for cached model
+                console.log('Reloading cached model:', progress)
+              }
+            }
+          )
+          
+          setEngine(newEngine)
+          setChat([{
+            role: 'assistant',
+            content: 'Hi! I\'m your Archetype documentation assistant. Ask me anything about using Archetype Engine!'
+          }])
+          setLoading(false)
+          inputRef.current?.focus()
+        } catch (error) {
+          console.error('Failed to reload model:', error)
+          setLoading(false)
+          // Clear cache flag if reload failed
+          localStorage.removeItem(cacheKey)
+        }
+      }
+    }
+    
+    checkExistingEngine()
+  }, [hasWebGPU])
+
+  // Initialize WebLLM model (first time)
   const initModel = async () => {
     if (!hasWebGPU) return
     
@@ -83,6 +130,9 @@ export function AIChat({ onClose }: AIChatProps) {
       
       setEngine(newEngine)
       setLoadingProgress('')
+      
+      // Mark as initialized in localStorage
+      localStorage.setItem('archetype_ai_model_initialized', 'true')
       
       // Add welcome message
       setChat([{
@@ -133,14 +183,16 @@ export function AIChat({ onClose }: AIChatProps) {
       
       const systemPrompt = `You are a helpful assistant for Archetype Engine documentation. Archetype is a TypeScript code generator that creates type-safe CRUD backends from entity definitions.
 
-${docsContext ? `Use this documentation to answer questions:\n\n${docsContext}\n` : ''}
+${docsContext ? `DOCUMENTATION CONTEXT (use ONLY this as your source of truth):\n\n${docsContext}\n` : 'No relevant documentation found for this question.'}
 
-Rules:
-- Be concise and helpful
-- Include code examples when relevant
-- Reference doc paths when available
-- If you don't know something, say so - don't make things up
-- Keep answers under 200 words unless asked for detail`
+CRITICAL RULES:
+- ONLY answer based on the documentation provided above
+- If the documentation doesn't cover the question, say "I don't have information about that in the documentation"
+- DO NOT use external knowledge or make assumptions
+- Use markdown formatting for code examples
+- Include doc paths when referencing specific features
+- Be concise (under 200 words) unless asked for detail
+- Format code blocks with proper syntax highlighting using triple backticks`
 
       const response = await engine.chat.completions.create({
         messages: [
@@ -254,7 +306,13 @@ Rules:
                     {msg.role === 'user' ? '👤' : '🤖'}
                   </div>
                   <div className={styles.messageContent}>
-                    {msg.content}
+                    {msg.role === 'assistant' ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </div>
               ))}

@@ -28,7 +28,8 @@ export function SearchModal({ onClose }: SearchModalProps) {
       .then(r => r.json())
       .then(index => {
         const ms = MiniSearch.loadJSON(index, {
-          fields: ['title', 'headings', 'content', 'description']
+          fields: ['title', 'headings', 'content', 'description'],
+          storeFields: ['title', 'path', 'description']
         })
         setMiniSearch(ms)
         setLoading(false)
