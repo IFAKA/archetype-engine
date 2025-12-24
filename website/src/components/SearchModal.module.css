@@ -1,0 +1,228 @@
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  width: 90%;
+  max-width: 640px;
+  background: var(--ifm-background-color);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: slideUp 0.2s ease-out;
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  position: relative;
+}
+
+.searchIcon {
+  color: var(--ifm-color-emphasis-600);
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  background: transparent;
+  color: var(--ifm-font-color-base);
+  font-family: var(--ifm-font-family-base);
+}
+
+.input::placeholder {
+  color: var(--ifm-color-emphasis-500);
+}
+
+.clearButton {
+  background: none;
+  border: none;
+  color: var(--ifm-color-emphasis-600);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 18px;
+  transition: background 0.15s;
+}
+
+.clearButton:hover {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.results {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.loading,
+.noResults {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.hint {
+  padding: 20px;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.hintTitle {
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.hintList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.hintList li::before {
+  content: '→';
+  margin-right: 8px;
+  color: var(--ifm-color-primary);
+}
+
+.result {
+  display: block;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.1s;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.result:hover,
+.result.selected {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.resultTitle {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: var(--ifm-font-color-base);
+}
+
+.resultDescription {
+  font-size: 13px;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.resultPath {
+  font-size: 12px;
+  color: var(--ifm-color-primary);
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.footer {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding: 12px 20px;
+  background: var(--ifm-color-emphasis-50);
+}
+
+.footerHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.footerHint kbd {
+  background: var(--ifm-color-emphasis-200);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .modal {
+  border-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .searchBox {
+  border-bottom-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .footer {
+  background: var(--ifm-color-emphasis-100);
+  border-top-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .result:hover,
+[data-theme='dark'] .result.selected {
+  background: var(--ifm-color-emphasis-200);
+}
+
+/* Scrollbar styling */
+.results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.results::-webkit-scrollbar-thumb {
+  background: var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+}
+
+.results::-webkit-scrollbar-thumb:hover {
+  background: var(--ifm-color-emphasis-400);
+}
