@@ -181,8 +181,10 @@ export const db = drizzle(connection, { schema, mode: 'default' })
 
 // src/server/trpc.ts
 export function getTrpcServerTemplate(config: InitConfig): string {
-  if (config.auth) {
-    return `import { initTRPC, TRPCError } from '@trpc/server'
+  // Headless mode (no database)
+  if (config.mode === 'headless') {
+    if (config.auth) {
+      return `import { initTRPC, TRPCError } from '@trpc/server'
 import { auth } from './auth'
 
 interface Context {
@@ -216,11 +218,69 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   })
 })
 `
+    }
+
+    return `import { initTRPC } from '@trpc/server'
+
+const t = initTRPC.create()
+
+export const router = t.router
+export const publicProcedure = t.procedure
+`
+  }
+
+  // Full mode (with database)
+  if (config.auth) {
+    return `import { initTRPC, TRPCError } from '@trpc/server'
+import { auth } from './auth'
+import { db } from './db'
+
+interface Context {
+  session: Awaited<ReturnType<typeof auth>> | null
+  db: typeof db
+}
+
+export async function createContext(): Promise<Context> {
+  const session = await auth()
+  return { session, db }
+}
+
+const t = initTRPC.context<Context>().create()
+
+export const router = t.router
+export const publicProcedure = t.procedure
+
+/**
+ * Protected procedure - requires authentication
+ * Use for entity operations that need auth
+ */
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in' })
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      session: ctx.session,
+      user: ctx.session.user,
+    },
+  })
+})
+`
   }
 
   return `import { initTRPC } from '@trpc/server'
+import { db } from './db'
 
-const t = initTRPC.create()
+interface Context {
+  db: typeof db
+}
+
+export function createContext(): Context {
+  return { db }
+}
+
+const t = initTRPC.context<Context>().create()
 
 export const router = t.router
 export const publicProcedure = t.procedure
@@ -285,13 +345,14 @@ export { handler as GET, handler as POST }
 
   return `import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
 import { appRouter } from '@/generated/trpc/routers'
+import { createContext } from '@/server/trpc'
 
 const handler = (req: Request) =>
   fetchRequestHandler({
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: () => ({}),
+    createContext,
   })
 
 export { handler as GET, handler as POST }

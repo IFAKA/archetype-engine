@@ -629,7 +629,6 @@ function buildHookContext(ctx: any) {
 
 import { z } from 'zod'
 import { router, ${procedureImports} } from '@/server/trpc'
-import { db } from '@/server/db'
 import { ${tableName} } from '@/generated/db/schema'
 ${schemaImport}
 ${drizzleImports}
@@ -663,7 +662,7 @@ export const ${lowerName}Router = router({
 ${combineConditions}
 
       // Build query
-      let query = db.select().from(${tableName})
+      let query = ctx.db.select().from(${tableName})
       if (whereClause) query = query.where(whereClause) as typeof query
       if (orderByClause) query = query.orderBy(orderByClause) as typeof query
 
@@ -671,7 +670,7 @@ ${combineConditions}
       const items = await query.limit(limit).offset(offset)
 
       // Get total count with same filters
-      let countQuery = db.select({ total: count() }).from(${tableName})
+      let countQuery = ctx.db.select({ total: count() }).from(${tableName})
       if (whereClause) countQuery = countQuery.where(whereClause) as typeof countQuery
       const [{ total }] = await countQuery
 
@@ -688,7 +687,7 @@ ${combineConditions}
   get: ${proc('get')}
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const result = await db.select().from(${tableName})
+      const result = await ctx.db.select().from(${tableName})
         .where(${getWhereClause})
         .limit(1)
       return ${useComputed ? 'result[0] ? withComputedFields(result[0]) : null' : 'result[0] ?? null'}
@@ -705,7 +704,7 @@ ${combineConditions}
         : input
 ` : ''}
       const now = new Date().toISOString()
-      const result = await db.insert(${tableName}).values({
+      const result = await ctx.db.insert(${tableName}).values({
         id: crypto.randomUUID(),
         ...${hooks.beforeCreate ? 'processedInput' : 'input'},${useTenancy ? `\n        ${manifest.tenancy.field}: ctx.${manifest.tenancy.field},` : ''}
         createdAt: now,
@@ -734,7 +733,7 @@ ${combineConditions}
         ? await ${lowerName}Hooks.beforeUpdate(input.id, input.data, hookCtx)
         : input.data
 ` : ''}
-      const result = await db.update(${tableName})
+      const result = await ctx.db.update(${tableName})
         .set({
           ...${hooks.beforeUpdate ? 'processedData' : 'input.data'},
           updatedAt: new Date().toISOString(),
@@ -762,12 +761,12 @@ ${combineConditions}
       }
 ` : ''}${useSoftDelete ? `
       // Soft delete
-      const result = await db.update(${tableName})
+      const result = await ctx.db.update(${tableName})
         .set({ deletedAt: new Date().toISOString() })
         .where(${getWhereClause})
         .returning()
       const record = ${useComputed ? 'result[0] ? withComputedFields(result[0]) : result[0]' : 'result[0]'}` : `
-      const result = await db.delete(${tableName})
+      const result = await ctx.db.delete(${tableName})
         .where(${getWhereClause})
         .returning()
       const record = ${useComputed ? 'result[0] ? withComputedFields(result[0]) : result[0]' : 'result[0]'}`}${hooks.afterRemove ? `
@@ -795,7 +794,7 @@ ${combineConditions}
         createdAt: now,
         updatedAt: now,
       }))
-      const result = await db.insert(${tableName}).values(values).returning()
+      const result = await ctx.db.insert(${tableName}).values(values).returning()
       return { created: ${useComputed ? 'result.map(withComputedFields)' : 'result'}, count: result.length }
     }),
 
@@ -813,7 +812,7 @@ ${combineConditions}
 
       // Update each item (Drizzle doesn't support bulk update with different values)
       for (const item of input.items) {
-        const result = await db.update(${tableName})
+        const result = await ctx.db.update(${tableName})
           .set({
             ...item.data,
             updatedAt: now,
@@ -833,12 +832,12 @@ ${combineConditions}
     }))
     .mutation(async ({ ctx, input }) => {${useSoftDelete ? `
       // Soft delete
-      const result = await db.update(${tableName})
+      const result = await ctx.db.update(${tableName})
         .set({ deletedAt: new Date().toISOString() })
         .where(${useTenancy ? `and(inArray(${tableName}.id, input.ids), eq(${tableName}.${manifest.tenancy.field}, ctx.${manifest.tenancy.field}), isNull(${tableName}.deletedAt))` : `and(inArray(${tableName}.id, input.ids), isNull(${tableName}.deletedAt))`})
         .returning()
       return { removed: ${useComputed ? 'result.map(withComputedFields)' : 'result'}, count: result.length }` : `
-      const result = await db.delete(${tableName})
+      const result = await ctx.db.delete(${tableName})
         .where(${useTenancy ? `and(inArray(${tableName}.id, input.ids), eq(${tableName}.${manifest.tenancy.field}, ctx.${manifest.tenancy.field}))` : `inArray(${tableName}.id, input.ids)`})
         .returning()
       return { removed: ${useComputed ? 'result.map(withComputedFields)' : 'result'}, count: result.length }`}
