@@ -160,9 +160,9 @@ export function AIChat({ onClose }: AIChatProps) {
     
     if (results.length === 0) return ''
     
-    // Build context from top results
+    // Build context from top results with clickable links
     const context = results.map((result: any) => {
-      return `## ${result.title}\nPath: ${result.path}\n${result.description || ''}\n`
+      return `## ${result.title}\n[View documentation](${result.path})\n\n${result.description || ''}\n`
     }).join('\n\n')
     
     return context
@@ -190,7 +190,8 @@ CRITICAL RULES:
 - If the documentation doesn't cover the question, say "I don't have information about that in the documentation"
 - DO NOT use external knowledge or make assumptions
 - Use markdown formatting for code examples
-- Include doc paths when referencing specific features
+- ALWAYS include the [View documentation](path) links from the context in your answer
+- When mentioning a feature, include its documentation link
 - Be concise (under 200 words) unless asked for detail
 - Format code blocks with proper syntax highlighting using triple backticks`
 
