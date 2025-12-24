@@ -1,144 +1,198 @@
-# Release Process
+# 🚀 Quick Release Commands
 
-This project uses automated publishing to npm via GitHub Actions.
+Copy-paste reference for common release tasks.
 
-## How It Works
+---
 
-1. **Every push to `main`** - Runs tests and build (`.github/workflows/ci.yml`)
-2. **Version tags only** - Publishes to npm (`.github/workflows/publish.yml`)
-
-## Publishing a New Version
-
-### Quick Release (Patch/Minor)
+## Standard Release
 
 ```bash
-# 1. Make your changes and commit
+# 1. Make changes, commit, push
 git add .
-git commit -m "fix: your bug fix"
-
-# 2. Bump version (automatically commits)
-npm version patch   # 2.0.0 → 2.0.1 (bug fixes)
-# OR
-npm version minor   # 2.0.0 → 2.1.0 (new features)
-
-# 3. Push with tags
-git push origin main --tags
-
-# 4. GitHub Actions automatically:
-#    - Runs tests
-#    - Builds package
-#    - Publishes to npm
-#    - Creates GitHub release
-```
-
-### Major Version (Breaking Changes)
-
-```bash
-# 1. Update code and tests
-git add .
-git commit -m "feat!: breaking change description"
-
-# 2. Bump major version
-npm version major   # 2.0.0 → 3.0.0
-
-# 3. Update migration guide
-vim CHANGELOG.md
-git add CHANGELOG.md
-git commit -m "docs: update changelog for v3.0.0"
-
-# 4. Push with tags
-git push origin main --tags
-```
-
-## Version Guidelines (Semantic Versioning)
-
-### Patch (2.0.0 → 2.0.1)
-- Bug fixes
-- Typo corrections
-- Documentation updates
-- Performance improvements (no API changes)
-
-### Minor (2.0.0 → 2.1.0)
-- New features (backwards compatible)
-- New field types
-- New template options
-- Deprecations (with warnings)
-
-### Major (2.0.0 → 3.0.0)
-- Breaking API changes
-- Removed deprecated features
-- Changed default behaviors
-- Required migration
-
-## Emergency Rollback
-
-If you publish a broken version:
-
-```bash
-# 1. Fix the issue locally
-git add .
-git commit -m "fix: critical bug"
-
-# 2. Publish hotfix immediately
-npm version patch
-git push origin main --tags
-
-# 3. Deprecate broken version (within 72 hours of publish)
-npm deprecate archetype-engine@2.0.1 "Broken - use 2.0.2 instead"
-```
-
-## Pre-release Versions
-
-For testing before official release:
-
-```bash
-# 1. Create beta version
-npm version prerelease --preid=beta  # 2.0.0 → 2.0.1-beta.0
-
-# 2. Push (will auto-publish with 'beta' tag)
-git push origin main --tags
-
-# 3. Users can test with:
-npm install archetype-engine@beta
-```
-
-## Troubleshooting
-
-### Publish Failed - Version Already Exists
-```bash
-# You forgot to bump version
-npm version patch
-git push origin main --tags
-```
-
-### Publish Failed - Tests Failed
-```bash
-# Fix tests first
-npm run test:run
-git add .
-git commit -m "fix: tests"
+git commit -m "feat: your feature"
 git push origin main
-# Then tag again
+
+# 2. Update CHANGELOG.md
+# (edit the file)
+
+# 3. Choose version type and release
+npm version patch && git push origin main --tags  # Bug fixes
+npm version minor && git push origin main --tags  # New features  
+npm version major && git push origin main --tags  # Breaking changes
 ```
 
-### Need to Skip CI for Docs
+---
+
+## Monitor Release
+
 ```bash
-git commit -m "docs: update readme [skip ci]"
+# Watch workflow run live
+gh run watch
+
+# Check latest run status
+gh run list --limit 1
+
+# View detailed logs
+gh run view --log
+
+# Check if package published
+npm info archetype-engine
 ```
 
-## Setup (One-time)
+---
 
-To enable automated publishing, add `NPM_TOKEN` to GitHub secrets:
+## Pre-release (Alpha/Beta/Test)
 
-1. Get npm token:
-   ```bash
-   npm login
-   npm token create --read-only=false
-   ```
+```bash
+# Create test version
+npm version prerelease --preid=test
+git push origin main --tags
 
-2. Add to GitHub:
-   - Go to: https://github.com/IFAKA/archetype-engine/settings/secrets/actions
-   - New secret: `NPM_TOKEN`
-   - Paste token
+# Create alpha version
+npm version prerelease --preid=alpha
+git push origin main --tags
 
-3. Done! Now tags auto-publish.
+# Create beta version
+npm version prerelease --preid=beta
+git push origin main --tags
+
+# Remove test version after (optional)
+npm unpublish archetype-engine@2.0.2-test.0
+```
+
+---
+
+## Fix Failed Release
+
+```bash
+# Rerun failed workflow (if trusted publisher was the issue)
+gh run rerun --failed
+
+# Or delete tag and retry with new version
+git tag -d v2.0.2
+git push origin :refs/tags/v2.0.2
+npm version patch  # Creates v2.0.3
+git push origin main --tags
+```
+
+---
+
+## Rollback Bad Release
+
+```bash
+# Deprecate (recommended - doesn't break existing installs)
+npm deprecate archetype-engine@2.0.2 "Critical bug, use 2.0.3 instead"
+
+# Then release fix
+npm version patch
+git push origin main --tags
+
+# OR unpublish (only < 72 hours, breaks users!)
+npm unpublish archetype-engine@2.0.2
+```
+
+---
+
+## Check Package Status
+
+```bash
+# View package details
+npm info archetype-engine
+
+# View all published versions
+npm view archetype-engine versions
+
+# View latest version
+npm view archetype-engine version
+
+# View download stats
+npm view archetype-engine downloads
+
+# Check GitHub releases
+gh release list
+gh release view v2.0.2
+```
+
+---
+
+## Test Installation
+
+```bash
+# Test latest version
+cd /tmp
+npx create-next-app test-app --typescript --tailwind --app --no-src-dir
+cd test-app
+npm install archetype-engine@latest
+npx archetype init --yes
+npx archetype generate
+```
+
+---
+
+## Emergency Hotfix
+
+```bash
+# Fastest path from bug to fix
+git add .
+git commit -m "fix: critical bug description"
+npm run test:run
+npm version patch && git push origin main --tags
+
+# Update changelog after
+git commit -am "docs: add changelog for hotfix"
+git push
+```
+
+---
+
+## Version Number Examples
+
+```bash
+# Current: 2.0.1
+
+npm version patch   # → 2.0.2 (bug fixes only)
+npm version minor   # → 2.1.0 (new features, backward compatible)
+npm version major   # → 3.0.0 (breaking changes)
+
+npm version prepatch   # → 2.0.2-0 (pre-release patch)
+npm version preminor   # → 2.1.0-0 (pre-release minor)
+npm version premajor   # → 3.0.0-0 (pre-release major)
+
+npm version prerelease --preid=alpha  # → 2.0.2-alpha.0
+npm version prerelease --preid=beta   # → 2.0.2-beta.0
+npm version prerelease --preid=rc     # → 2.0.2-rc.0
+npm version prerelease --preid=test   # → 2.0.2-test.0
+```
+
+---
+
+## Useful URLs
+
+- **npm Package:** https://www.npmjs.com/package/archetype-engine
+- **GitHub Repo:** https://github.com/IFAKA/archetype-engine
+- **Workflows:** https://github.com/IFAKA/archetype-engine/actions
+- **Releases:** https://github.com/IFAKA/archetype-engine/releases
+- **Trusted Publisher Setup:** https://www.npmjs.com/package/archetype-engine/access
+- **Docs:** https://archetype-engine.vercel.app
+
+---
+
+## Workflow Triggers
+
+The publish workflow runs automatically when you push a tag matching `v*.*.*`:
+
+```bash
+git push origin main --tags  # Triggers if tag matches v2.0.1, v2.1.0, etc.
+```
+
+**What the workflow does:**
+1. Runs `npm ci` (install dependencies)
+2. Runs `npm run test:run` (all tests must pass)
+3. Runs `npm run build` (compile TypeScript)
+4. Runs `npm publish --access public` (publish with OIDC auth)
+5. Creates GitHub release with changelog link
+
+**Requirements:**
+- All tests pass
+- Trusted publisher configured on npm
+- Tag format: `v{major}.{minor}.{patch}` (e.g., `v2.0.1`)
