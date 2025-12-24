@@ -31,6 +31,8 @@ export const coreDependencies = [
 // Dev dependencies (always installed)
 export const coreDevDependencies = [
   'drizzle-kit',
+  'tsx',        // For running seed scripts
+  'vitest',     // For running tests
 ]
 
 // Database-specific dependencies

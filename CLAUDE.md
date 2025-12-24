@@ -33,7 +33,8 @@ npx archetype generate                # Generate code from entities
 npx archetype generate path/to/config.ts  # Use custom config
 npx archetype generate manifest.json  # Generate from JSON (AI-optimized)
 npx archetype validate manifest.json --json  # Validate JSON manifest
-npx archetype view                    # View ERD in browser
+npx archetype view                    # View ERD in browser (port 3333)
+npx archetype docs                    # View API docs - Swagger UI (port 3334)
 ```
 
 ## AI-Optimized Workflow (⚡ Faster for Claude Code)

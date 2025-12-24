@@ -297,6 +297,93 @@ function buildHTML(mermaidCode: string): string {
 </html>`
 }
 
+function serveOpenAPIDocs(port = 3334, maxAttempts = 10): void {
+  // Check if generated/docs/openapi.json exists
+  const openapiPath = path.resolve('generated/docs/openapi.json')
+  
+  if (!fs.existsSync(openapiPath)) {
+    console.error('OpenAPI spec not found at: generated/docs/openapi.json')
+    console.error('Run "npx archetype generate" first to generate API documentation')
+    process.exit(1)
+  }
+
+  const openapiSpec = fs.readFileSync(openapiPath, 'utf-8')
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Documentation - Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <style>
+    body { margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      window.ui = SwaggerUIBundle({
+        spec: ${openapiSpec},
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: 'StandaloneLayout',
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 1,
+      });
+    };
+  </script>
+</body>
+</html>`
+
+  const server = http.createServer((req, res) => {
+    // Serve OpenAPI JSON spec at /openapi.json
+    if (req.url === '/openapi.json') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(openapiSpec)
+    } else {
+      // Serve Swagger UI HTML
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end(html)
+    }
+  })
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      const nextPort = port + 1
+      if (nextPort - 3334 < maxAttempts) {
+        console.log(`Port ${port} is in use, trying ${nextPort}...`)
+        serveOpenAPIDocs(nextPort, maxAttempts)
+      } else {
+        console.error(`Could not find an available port (tried ${3334}-${port})`)
+        console.error('Try killing the process using the port:')
+        console.error(`  lsof -i :3334 | grep LISTEN | awk '{print $2}' | xargs kill -9`)
+        process.exit(1)
+      }
+    } else {
+      console.error('Server error:', err.message)
+      process.exit(1)
+    }
+  })
+
+  server.listen(port, () => {
+    console.log(`http://localhost:${port}`)
+    console.log('Ctrl+C to stop')
+    openBrowser(`http://localhost:${port}`)
+  })
+}
+
 async function runGenerate(manifest: ManifestIR): Promise<void> {
   // Determine template: CLI flag > config > error
   const templateId = templateOverride || manifest.template
@@ -510,6 +597,9 @@ async function main() {
     const manifest = loadManifest(configPath)
     const erd = generateERDFromIR(manifest)
     serveERD(erd)
+  } else if (command === 'docs') {
+    // Serve OpenAPI documentation
+    serveOpenAPIDocs()
   } else if (command === 'init') {
     // Run the TUI init flow
     await init({ yes: yesFlag, headless: headlessFlag })
@@ -525,6 +615,7 @@ async function main() {
     console.log('  archetype generate [config]    - Generate code from entities')
     console.log('  archetype validate [config]    - Validate manifest without generating')
     console.log('  archetype view [config]        - View ERD diagram in browser')
+    console.log('  archetype docs                 - View OpenAPI/Swagger documentation in browser')
     console.log('  archetype mcp                  - Start MCP server (for Claude Desktop/Code)')
     console.log('')
     console.log('Flags:')

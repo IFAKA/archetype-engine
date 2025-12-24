@@ -214,6 +214,72 @@ Archetype generates the **missing backend layer**:
 
 ---
 
+## CLI Commands
+
+Archetype provides a suite of commands organized by namespace to avoid conflicts with your Next.js project:
+
+### Archetype Commands (Code Generation & Documentation)
+
+```bash
+npx archetype init                 # Interactive setup with entity templates
+npx archetype generate             # Generate all code from entities
+npx archetype view                 # View ERD diagram in browser (port 3333)
+npx archetype docs                 # View OpenAPI/Swagger UI (port 3334)
+npx archetype validate             # Validate manifest without generating
+```
+
+### Project Scripts (Added by `npx archetype init`)
+
+New projects automatically get these npm scripts:
+
+```json
+{
+  "scripts": {
+    // Archetype - Generation & Docs
+    "archetype:generate": "archetype generate",
+    "archetype:view": "archetype view",
+    "archetype:docs": "archetype docs",
+    "archetype:check": "archetype validate",
+    
+    // Database - Schema & Data
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx generated/seeds/run.ts",
+    "db:seed:reset": "tsx generated/seeds/run.ts --reset",
+    
+    // Testing
+    "test:api": "vitest run generated/tests"
+  }
+}
+```
+
+### Common Workflows
+
+**Initial setup:**
+```bash
+npm run archetype:generate   # Generate code
+npm run db:push              # Create database schema
+npm run db:seed              # Add sample data
+npm run dev                  # Start dev server
+```
+
+**Development loop:**
+```bash
+# Edit archetype/entities/product.ts
+npm run archetype:generate   # Regenerate code
+npm run db:push              # Update schema
+npm run dev                  # Test changes
+```
+
+**Documentation & validation:**
+```bash
+npm run archetype:view       # View entity relationships
+npm run archetype:docs       # Browse API endpoints
+npm run archetype:check      # Validate entity definitions
+```
+
+---
+
 ## Roadmap
 
 - [x] Core entity system with relations

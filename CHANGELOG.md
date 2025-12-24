@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2024-12-24
+
+### 🚀 Developer Experience Improvements
+
+Major improvements to CLI commands and project scripts organization.
+
+### Added
+
+#### New CLI Commands
+- **`archetype docs`** - Serve OpenAPI/Swagger UI documentation in browser (port 3334)
+  - Interactive API testing with Swagger UI
+  - Auto-opens browser like `archetype view`
+  - Reads from `generated/docs/openapi.json`
+
+#### New Project Scripts (Auto-added by `npx archetype init`)
+- **`archetype:docs`** - View API documentation (Swagger UI)
+- **`archetype:check`** - Validate manifest without generating code
+- **`db:seed`** - Seed database with sample data
+- **`db:seed:reset`** - Reset database and seed with fresh data
+- **test:api** - Run generated Vitest tests
+
+#### Enhanced Dependencies
+- **`tsx`** - Added as dev dependency for running seed scripts
+- **`vitest`** - Added as dev dependency for running tests
+
+### Changed
+
+- **Script Organization** - All scripts now follow clean namespace patterns:
+  - `archetype:*` - Code generation, docs, validation
+  - `db:*` - Database operations (schema, studio, seeding)
+  - `test:*` - Testing commands
+  - No namespace conflicts with Next.js native commands
+
+- **README** - Added comprehensive CLI Commands section with:
+  - All Archetype CLI commands
+  - Project scripts reference
+  - Common workflow examples
+
+- **Documentation Templates** - Updated `CLAUDE.md` and README templates with all new commands
+
+### Fixed
+
+- **OpenAPI CORS Issue** - Swagger UI no longer tries to load via `file://` protocol
+  - Now served via HTTP on port 3334
+  - Fixes "Cross origin requests" browser error
+
+### Technical Details
+
+- **Files changed**: 5 (cli.ts, templates.ts, dependencies.ts, README.md, CHANGELOG.md)
+- **No breaking changes** - Fully backwards compatible
+- **Existing projects** - Can manually add scripts to package.json
+
+### Migration Guide
+
+**For new projects:**
+```bash
+npx archetype init  # Now includes all new scripts automatically
+```
+
+**For existing projects:**
+Add these scripts to your `package.json`:
+```json
+{
+  "scripts": {
+    "archetype:docs": "archetype docs",
+    "archetype:check": "archetype validate",
+    "db:seed": "tsx generated/seeds/run.ts",
+    "db:seed:reset": "tsx generated/seeds/run.ts --reset",
+    "test:api": "vitest run generated/tests"
+  },
+  "devDependencies": {
+    "tsx": "latest",
+    "vitest": "latest"
+  }
+}
+```
+
 ## [2.2.0] - 2024-12-24
 
 ### 📚 Documentation Improvements

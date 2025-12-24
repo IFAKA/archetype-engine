@@ -641,11 +641,20 @@ npm run db:push
 ## Available Commands
 
 \`\`\`bash
+# Archetype commands
 npm run archetype:generate   # Generate code from entities
-npm run archetype:view       # View ERD in browser
+npm run archetype:view       # View ERD diagram in browser
+npm run archetype:docs       # View API docs (Swagger UI)
+npm run archetype:check      # Validate manifest without generating
+
+# Database commands
 npm run db:push              # Push schema to database
-npm run db:studio            # Open Drizzle Studio
-npx archetype validate manifest.json --json  # Validate manifest
+npm run db:studio            # Open Drizzle Studio (database GUI)
+npm run db:seed              # Seed database with sample data
+npm run db:seed:reset        # Reset database and seed
+
+# Testing
+npm run test:api             # Run generated API tests
 \`\`\`
 
 ## Examples
@@ -879,20 +888,20 @@ When discussing code, use \`file:line\` format: \`archetype/entities/user.ts:12\
 
 ## Commands Reference
 \`\`\`bash
-# Generate code from entities
-npm run archetype:generate
+# Archetype - Generate & View
+npm run archetype:generate   # Generate code from entities
+npm run archetype:view       # View ERD diagram in browser
+npm run archetype:docs       # View API docs (Swagger UI)
+npm run archetype:check      # Validate manifest without generating
 
-# View ERD diagram
-npm run archetype:view
+# Database (full mode only)
+npm run db:push              # Push schema to database
+npm run db:studio            # Open Drizzle Studio (database GUI)
+npm run db:seed              # Seed database with sample data
+npm run db:seed:reset        # Reset database and seed
 
-# Push schema to database (full mode)
-npm run db:push
-
-# Open Drizzle Studio (full mode)
-npm run db:studio
-
-# Validate manifest
-npx archetype validate manifest.json --json
+# Testing
+npm run test:api             # Run generated API tests
 \`\`\`
 
 ## Examples
@@ -1057,14 +1066,20 @@ export function getAllTemplateFiles(config: InitConfig, structure: ProjectStruct
 // package.json scripts to add
 export function getPackageJsonScripts(config: InitConfig): Record<string, string> {
   const scripts: Record<string, string> = {
+    // Archetype - core commands
     'archetype:generate': 'archetype generate',
     'archetype:view': 'archetype view',
+    'archetype:docs': 'archetype docs',
+    'archetype:check': 'archetype validate',
   }
 
   // Only add database scripts for full mode
   if (config.mode === 'full') {
     scripts['db:push'] = 'drizzle-kit push'
     scripts['db:studio'] = 'drizzle-kit studio'
+    scripts['db:seed'] = 'tsx generated/seeds/run.ts'
+    scripts['db:seed:reset'] = 'tsx generated/seeds/run.ts --reset'
+    scripts['test:api'] = 'vitest run generated/tests'
   }
 
   return scripts
