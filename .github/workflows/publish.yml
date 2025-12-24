@@ -32,9 +32,10 @@ jobs:
         run: npm run build
       
       - name: Publish to npm (using Trusted Publishing)
-        run: npm publish --provenance --access public
-        # Note: --provenance flag + id-token:write permission enables OIDC
-        # No registry-url or NODE_AUTH_TOKEN needed for trusted publishing
+        # Using npx to ensure we use npm's built-in OIDC support
+        run: npx --yes npm@latest publish --provenance --access public
+        # Note: npm 9.5.0+ with --provenance automatically uses OIDC when id-token:write is set
+        # The trusted publisher configured on npmjs.com validates the OIDC token
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
