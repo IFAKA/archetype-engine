@@ -1,43 +1,50 @@
-// Core exports
+/**
+ * Archetype Engine - Main API
+ *
+ * This is the primary interface most users need.
+ * For advanced usage (templates, JSON parsing, AI tools), see namespace exports below.
+ *
+ * @packageDocumentation
+ */
 
-// Field builders
-export { text, number, boolean, date, enumField, computed } from './fields'
-export type {
-  FieldBuilder,
-  TextFieldBuilder,
-  NumberFieldBuilder,
-  BooleanFieldBuilder,
-  DateFieldBuilder,
-  EnumFieldBuilder,
-  ComputedFieldBuilder,
-  ComputedOptions,
-  FieldConfig,
-  Validation,
-} from './fields'
-
-// Relation builders
-export { hasOne, hasMany, belongsToMany } from './relations'
-export type { RelationBuilder, RelationConfig, RelationType } from './relations'
+// ============================================================================
+// PRIMARY API - Use these in archetype.config.ts
+// ============================================================================
 
 // Entity definition
 export { defineEntity } from './entity'
+export type { EntityDefinition, EntityBehaviors } from './entity'
+
+// Manifest/Config definition
+export { defineManifest, defineConfig } from './manifest'
+export type { ManifestDefinition } from './manifest'
+
+// Field builders
+export { text, number, boolean, date, enumField, computed } from './fields'
+export type { FieldBuilder, ComputedOptions } from './fields'
+
+// Relation builders
+export { hasOne, hasMany, belongsToMany } from './relations'
+export type { RelationBuilder, RelationType } from './relations'
+
+// External API source
+export { external } from './source'
+export type { ExternalSourceConfig } from './source'
+
+// ============================================================================
+// ADVANCED API - For framework internals & tooling
+// ============================================================================
+
+// Protection & hooks configuration
 export type {
-  EntityDefinition,
-  EntityBehaviors,
-  EntityIR,
   ProtectedShorthand,
   ProtectedConfig,
   ProtectedOption,
-  ProtectedIR,
   HooksConfig,
-  HooksIR,
 } from './entity'
 
-// Manifest definition
-export { defineManifest, defineConfig, normalizeMode } from './manifest'
+// Manifest configuration types
 export type {
-  ManifestDefinition,
-  ManifestIR,
   ModeConfig,
   DatabaseConfig,
   AuthConfig,
@@ -47,48 +54,56 @@ export type {
   DefaultBehaviors,
 } from './manifest'
 
-// External API source
-export { external, resolveEndpoints } from './source'
+// Field builder types (for advanced usage)
 export type {
-  ExternalSourceConfig,
+  TextFieldBuilder,
+  NumberFieldBuilder,
+  BooleanFieldBuilder,
+  DateFieldBuilder,
+  EnumFieldBuilder,
+  ComputedFieldBuilder,
+  Validation,
+} from './fields'
+
+// Source configuration
+export { resolveEndpoints } from './source'
+export type {
   ExternalSourceOptions,
   DatabaseSourceConfig,
   SourceConfig,
 } from './source'
 
-// Legacy type exports (for backwards compatibility)
-export { EntityConfig, PropertyConfig, Manifest, isPropertyConfig } from './types'
+// ============================================================================
+// NAMESPACED EXPORTS - Opt-in for advanced features
+// ============================================================================
 
-// Template system
+/**
+ * Internal IR (Intermediate Representation) types
+ * Use these when building tools that consume compiled entities/manifests
+ */
+export type { EntityIR, ProtectedIR, HooksIR } from './entity'
+export type { ManifestIR } from './manifest'
+export { normalizeMode } from './manifest'
+
+/**
+ * Template system
+ * For building custom code generators
+ */
 export { getTemplate, listTemplates, hasTemplate, runTemplate, createContext } from './template'
 export type { Template, Generator, GeneratedFile, TemplateConfig } from './template/types'
 
-// JSON input for AI agents
-export { parseManifestJSON, parseEntityJSON, parseFieldJSON, loadManifestFromJSONFile } from './json/parser'
-export type {
-  ManifestJSON,
-  EntityJSON,
-  FieldJSON,
-  RelationJSON,
-  BehaviorsJSON,
-  ProtectedJSON,
-  ProtectedConfigJSON,
-  ExternalSourceJSON,
-  ExternalAuthJSON,
-  EndpointOverrideJSON,
-  DatabaseJSON,
-  AuthJSON,
-  I18nJSON,
-  ObservabilityJSON,
-  TenancyJSON,
-  DefaultsJSON,
-} from './json/types'
-
-// Validation for AI agents
+/**
+ * JSON parser & validation
+ * For AI agents and JSON-based configuration
+ */
+export * as json from './json'
 export { validateManifest, ValidationCodes } from './validation'
 export type { ValidationError, ValidationResult } from './validation'
 
-// AI tools (for modern AI frameworks)
-// Import from 'archetype-engine/ai' for full AI toolkit
+/**
+ * AI tools
+ * For building AI-powered app builders
+ * Also available via: import { ... } from 'archetype-engine/ai'
+ */
 export { createManifestBuilder, aiTools } from './ai'
 export type { ManifestBuilder, ToolResult } from './ai/types'

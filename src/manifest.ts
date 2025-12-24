@@ -21,7 +21,7 @@ export interface ModeConfig {
    * When headless, optionally specify which generators to include
    * Default: ['validation', 'hooks', 'services', 'i18n']
    */
-  include?: ('validation' | 'hooks' | 'types' | 'services' | 'i18n')[]
+  include?: ('schema' | 'validation' | 'api' | 'hooks' | 'types' | 'services' | 'i18n')[]
 }
 
 /**

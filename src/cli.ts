@@ -40,9 +40,21 @@ function output(data: unknown): void {
 }
 
 /**
+ * Additional error data for JSON output
+ */
+interface ErrorData {
+  code?: string
+  details?: object
+  path?: string
+  parseError?: string
+  suggestion?: string
+  availableTemplates?: string[]
+}
+
+/**
  * Error output helper
  */
-function errorOutput(message: string, data?: Record<string, unknown>): void {
+function errorOutput(message: string, data?: ErrorData): void {
   if (jsonOutputFlag) {
     console.log(JSON.stringify({ success: false, error: message, ...data }, null, 2))
   } else {

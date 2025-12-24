@@ -33,6 +33,7 @@ export interface FieldConfig {
 
 // Base builder interface - generic to preserve type through chain
 export interface BaseFieldBuilder<T> {
+  /** @internal - Do not use directly. Use the fluent methods instead. */
   readonly _config: FieldConfig
   required(): T
   optional(): T

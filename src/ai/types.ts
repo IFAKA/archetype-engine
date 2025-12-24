@@ -23,6 +23,17 @@ export interface ToolParameter {
 }
 
 /**
+ * JSON Schema property (for tool schemas)
+ */
+export interface SchemaProperty {
+  type: string
+  description: string
+  enum?: string[]
+  items?: SchemaProperty
+  additionalProperties?: boolean
+}
+
+/**
  * Tool definition (framework-agnostic)
  */
 export interface ToolDefinition {

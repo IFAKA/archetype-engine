@@ -6,7 +6,7 @@
  * @module ai/adapters/anthropic
  */
 
-import type { AnthropicTool, ManifestBuilder, ToolResult } from '../types'
+import type { AnthropicTool, ManifestBuilder, ToolResult, SchemaProperty } from '../types'
 import { toolDefinitions } from '../tools'
 import { executeOpenAITool } from './openai'
 
@@ -14,12 +14,12 @@ import { executeOpenAITool } from './openai'
  * Convert a tool definition to Anthropic format
  */
 function toAnthropicSchema(def: typeof toolDefinitions[string]): AnthropicTool {
-  const properties: Record<string, unknown> = {}
+  const properties: Record<string, SchemaProperty> = {}
 
   for (const [name, param] of Object.entries(def.parameters)) {
     if (name.startsWith('[')) continue // Skip placeholder properties
 
-    const prop: Record<string, unknown> = {
+    const prop: SchemaProperty = {
       type: param.type,
       description: param.description,
     }
@@ -29,9 +29,12 @@ function toAnthropicSchema(def: typeof toolDefinitions[string]): AnthropicTool {
     }
 
     if (param.type === 'array' && param.items) {
-      prop.items = { type: param.items.type }
+      prop.items = {
+        type: param.items.type,
+        description: param.items.description,
+      }
       if (param.items.enum) {
-        (prop.items as Record<string, unknown>).enum = param.items.enum
+        prop.items.enum = param.items.enum
       }
     }
 
@@ -61,13 +64,20 @@ export function getAnthropicTools(): AnthropicTool[] {
 }
 
 /**
+ * Tool input parameters
+ */
+export interface ToolInput {
+  [key: string]: unknown
+}
+
+/**
  * Execute a tool call and return the result
  * Reuses OpenAI execution logic since the interface is the same
  */
 export function executeAnthropicTool(
   builder: ManifestBuilder,
   toolName: string,
-  input: Record<string, unknown>
+  input: ToolInput
 ): ToolResult {
   return executeOpenAITool(builder, toolName, input)
 }
@@ -78,7 +88,7 @@ export function executeAnthropicTool(
 export function createAnthropicHandler(builder: ManifestBuilder) {
   return {
     tools: getAnthropicTools(),
-    execute: (toolName: string, input: Record<string, unknown>) =>
+    execute: (toolName: string, input: ToolInput) =>
       executeAnthropicTool(builder, toolName, input),
   }
 }

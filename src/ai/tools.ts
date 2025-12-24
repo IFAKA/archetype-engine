@@ -10,6 +10,7 @@ import type { ToolDefinition } from './types'
 
 /**
  * Field type JSON schema
+ * Note: Type assertion required because of deeply nested schema structure
  */
 const fieldSchema = {
   type: 'object' as const,
@@ -71,6 +72,7 @@ const fieldSchema = {
 
 /**
  * Relation type JSON schema
+ * Note: Type assertion required because of deeply nested schema structure
  */
 const relationSchema = {
   type: 'object' as const,

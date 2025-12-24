@@ -398,8 +398,12 @@ export function getAuthTemplate(config: InitConfig): string {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // TODO: Implement your own authentication logic
-        // This is a placeholder - replace with actual user lookup
+        // SCAFFOLD: Replace this placeholder with your authentication logic
+        // Example implementation:
+        //   1. Validate credentials exist
+        //   2. Look up user in database by email
+        //   3. Verify password with bcrypt
+        //   4. Return user object or null
         if (!credentials?.email || !credentials?.password) return null
 
         // Example: look up user in database

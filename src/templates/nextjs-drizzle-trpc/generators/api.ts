@@ -226,7 +226,18 @@ function generateExternalEntityRouter(entity: EntityIR, manifest: ManifestIR): s
   const hookContextBuilder = useHooks
     ? `
 // Build hook context from tRPC context
-function buildHookContext(ctx: any) {
+interface TRPCContextSession {
+  session?: {
+    user?: {
+      id: string
+      email?: string | null
+      name?: string | null
+    }
+  } | null
+  headers?: Record<string, string | string[]>
+}
+
+function buildHookContext(ctx: TRPCContextSession) {
   return {
     user: ctx.session?.user ? {
       id: ctx.session.user.id,
@@ -488,7 +499,7 @@ function generateComputedFieldsMapper(entity: EntityIR): string {
 
   return `
 // Helper: Add computed fields to a record
-function withComputedFields<T extends Record<string, any>>(record: T) {
+function withComputedFields<T extends Record<string, unknown>>(record: T) {
   return {
     ...record,
 ${fieldMappings}
@@ -514,7 +525,7 @@ function generateOrderByBuilder(entity: EntityIR, tableName: string): string {
 
   return `function buildOrderBy(orderBy: NonNullable<z.infer<typeof listInput>>['orderBy']) {
   if (!orderBy) return undefined
-  let column: any
+  let column: unknown
   switch (orderBy.field) {
 ${fieldCases}
   }
@@ -566,7 +577,18 @@ function generateDatabaseEntityRouter(entity: EntityIR, manifest: ManifestIR): s
   const hookContextBuilder = useHooks
     ? `
 // Build hook context from tRPC context
-function buildHookContext(ctx: any) {
+interface TRPCContextSession {
+  session?: {
+    user?: {
+      id: string
+      email?: string | null
+      name?: string | null
+    }
+  } | null
+  headers?: Record<string, string | string[]>
+}
+
+function buildHookContext(ctx: TRPCContextSession) {
   return {
     user: ctx.session?.user ? {
       id: ctx.session.user.id,

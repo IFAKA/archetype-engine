@@ -6,19 +6,26 @@
  * @module ai/adapters/openai
  */
 
-import type { OpenAITool, ManifestBuilder, ToolResult } from '../types'
+import type { OpenAITool, ManifestBuilder, ToolResult, SchemaProperty } from '../types'
 import { toolDefinitions } from '../tools'
+
+/**
+ * Tool input parameters
+ */
+export interface ToolInput {
+  [key: string]: unknown
+}
 
 /**
  * Convert a tool definition to OpenAI format
  */
 function toOpenAISchema(def: typeof toolDefinitions[string]): OpenAITool {
-  const properties: Record<string, unknown> = {}
+  const properties: Record<string, SchemaProperty> = {}
 
   for (const [name, param] of Object.entries(def.parameters)) {
     if (name.startsWith('[')) continue // Skip placeholder properties
 
-    const prop: Record<string, unknown> = {
+    const prop: SchemaProperty = {
       type: param.type,
       description: param.description,
     }
@@ -28,9 +35,12 @@ function toOpenAISchema(def: typeof toolDefinitions[string]): OpenAITool {
     }
 
     if (param.type === 'array' && param.items) {
-      prop.items = { type: param.items.type }
+      prop.items = {
+        type: param.items.type,
+        description: param.items.description,
+      }
       if (param.items.enum) {
-        (prop.items as Record<string, unknown>).enum = param.items.enum
+        prop.items.enum = param.items.enum
       }
     }
 
@@ -64,14 +74,18 @@ export function getOpenAITools(): OpenAITool[] {
 
 /**
  * Execute a tool call and return the result
+ *
+ * Note: AI frameworks send untyped JSON. We trust the AI to provide correctly-shaped data
+ * and rely on runtime validation within the builder methods to catch errors.
  */
 export function executeOpenAITool(
   builder: ManifestBuilder,
   functionName: string,
-  args: Record<string, unknown>
+  args: ToolInput
 ): ToolResult {
   switch (functionName) {
     case 'add_entity':
+      // AI sends untyped JSON - type assertion required
       return builder.addEntity(args as unknown as Parameters<typeof builder.addEntity>[0])
 
     case 'update_entity':
@@ -126,7 +140,7 @@ export function executeOpenAITool(
 export function createOpenAIHandler(builder: ManifestBuilder) {
   return {
     tools: getOpenAITools(),
-    execute: (functionName: string, args: Record<string, unknown>) =>
+    execute: (functionName: string, args: ToolInput) =>
       executeOpenAITool(builder, functionName, args),
   }
 }

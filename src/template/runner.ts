@@ -14,7 +14,9 @@ const SKIP_IN_HEADLESS = ['drizzle-schema']
 /**
  * Generator name mapping to include categories
  */
-const GENERATOR_CATEGORIES: Record<string, string> = {
+type GeneratorCategory = 'schema' | 'validation' | 'api' | 'hooks' | 'types' | 'services' | 'i18n'
+
+const GENERATOR_CATEGORIES: Record<string, GeneratorCategory> = {
   'drizzle-schema': 'schema',
   'zod-schemas': 'validation',
   'trpc-routers': 'api',
@@ -45,7 +47,7 @@ function shouldRunGenerator(generator: Generator, mode: ModeConfig): boolean {
       const category = GENERATOR_CATEGORIES[name]
       // If we don't know the category, include it by default
       if (!category) return true
-      return mode.include.includes(category as any)
+      return mode.include.includes(category)
     }
 
     return true
