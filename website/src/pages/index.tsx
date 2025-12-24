@@ -307,6 +307,114 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 })`,
+    tests: `import { describe, it, expect } from 'vitest'
+import { appRouter } from '@/generated/trpc/routers'
+import { createCallerFactory } from '@trpc/server'
+
+const createCaller = createCallerFactory(appRouter)
+
+describe('Product Router', () => {
+  const publicCaller = createCaller({ session: null })
+  const authCaller = createCaller({ session: { user: { id: 'test-user' } } })
+
+  const validData = {
+    name: 'Test Product',
+    price: 99.99,
+    description: 'A great product',
+  }
+
+  describe('create', () => {
+    it('should require authentication', async () => {
+      await expect(
+        publicCaller.product.create(validData)
+      ).rejects.toThrow(/UNAUTHORIZED/)
+    })
+
+    it('should create product when authenticated', async () => {
+      const result = await authCaller.product.create(validData)
+      expect(result.name).toBe(validData.name)
+      expect(result.price).toBe(validData.price)
+    })
+
+    it('should reject invalid price', async () => {
+      await expect(
+        authCaller.product.create({ ...validData, price: -10 })
+      ).rejects.toThrow(/positive/)
+    })
+  })
+
+  describe('list', () => {
+    it('should return paginated results', async () => {
+      const result = await publicCaller.product.list({ page: 1, limit: 10 })
+      expect(result.items).toBeInstanceOf(Array)
+      expect(result.page).toBe(1)
+    })
+  })
+})`,
+    docs: `// generated/docs/openapi.json
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Generated API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/trpc/product.create": {
+      "post": {
+        "summary": "Create Product",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "price": { "type": "number", "minimum": 0 },
+                  "description": { "type": "string" }
+                },
+                "required": ["name", "price"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Success" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    }
+  }
+}
+
+// Also generates:
+// - swagger.html (Interactive Swagger UI)
+// - API.md (Markdown documentation)`,
+    seeds: `import { db } from '@/server/db'
+import { products } from '@/generated/db/schema'
+
+export async function seedProducts(count = 10) {
+  let faker: any
+  try {
+    faker = (await import('@faker-js/faker')).faker
+  } catch {
+    faker = null
+  }
+
+  const data = Array.from({ length: count }, (_, i) => ({
+    name: faker ? faker.commerce.productName() : \`Product \${i}\`,
+    price: faker ? faker.number.float({ min: 10, max: 1000, precision: 0.01 }) : 99.99,
+    description: faker ? faker.commerce.productDescription() : \`Description \${i}\`,
+    createdAt: faker ? faker.date.recent({ days: 30 }) : new Date(),
+    updatedAt: new Date(),
+  }))
+
+  const created = await db.insert(products).values(data).returning()
+  console.log(\`✓ Created \${created.length} products\`)
+  return created
+}
+
+// Usage: npm run seed`,
   },
   headless: {
     validation: `import { z } from 'zod'
@@ -487,6 +595,49 @@ export function useUpdateProduct() {
     onSuccess: () => utils.product.invalidate(),
   })
 }`,
+    tests: `import { describe, it, expect } from 'vitest'
+import { appRouter } from '@/generated/trpc/routers'
+
+describe('Product Router', () => {
+  it('should validate product creation', async () => {
+    const validData = {
+      name: 'Test Product',
+      price: 99.99,
+    }
+    // Test validation logic
+    expect(validData.price).toBeGreaterThan(0)
+  })
+
+  it('should handle API responses', async () => {
+    // Test API client integration
+  })
+})`,
+    docs: `// generated/docs/openapi.json
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/trpc/product.list": {
+      "get": {
+        "summary": "List Products",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ]
+      }
+    }
+  }
+}`,
+    seeds: `export async function seedProducts(count = 10) {
+  const data = Array.from({ length: count }, (_, i) => ({
+    name: \`Product \${i}\`,
+    price: 10 + (i * 10),
+    description: \`Description for product \${i}\`,
+  }))
+
+  // Mock data for development/testing
+  console.log(\`Generated \${data.length} products\`)
+  return data
+}`,
   },
 }
 
@@ -505,12 +656,18 @@ const outputItems: Record<Mode, OutputItem[]> = {
     { key: 'api', label: 'API', desc: 'tRPC routers' },
     { key: 'hooks', label: 'Hooks', desc: 'React Query' },
     { key: 'auth', label: 'Auth', desc: 'NextAuth.js' },
+    { key: 'tests', label: 'Tests', desc: 'Vitest suites' },
+    { key: 'docs', label: 'API Docs', desc: 'OpenAPI + Swagger' },
+    { key: 'seeds', label: 'Seeds', desc: 'Sample data' },
   ],
   headless: [
     { key: 'validation', label: 'Validation', desc: 'Zod schemas' },
     { key: 'services', label: 'Services', desc: 'API clients' },
     { key: 'api', label: 'API', desc: 'tRPC routers' },
     { key: 'hooks', label: 'Hooks', desc: 'React Query' },
+    { key: 'tests', label: 'Tests', desc: 'Vitest suites' },
+    { key: 'docs', label: 'API Docs', desc: 'OpenAPI + Swagger' },
+    { key: 'seeds', label: 'Seeds', desc: 'Sample data' },
   ],
 }
 
@@ -519,6 +676,7 @@ function Hero() {
     <section className={styles.hero}>
       <h1 className={styles.title}>Archetype</h1>
       <p className={styles.tagline}>Define once. Generate everything.</p>
+      <p className={styles.subtitle}>Database • APIs • Tests • Docs • Seeds</p>
       <Link className={styles.cta} to="/docs">
         Get Started
       </Link>
@@ -632,7 +790,7 @@ function Features() {
       </div>
       <div className={styles.feature}>
         <span className={styles.featureIcon}>*</span>
-        <span className={styles.featureText}>Filtering, pagination, batch ops</span>
+        <span className={styles.featureText}>Tests, docs, seeds auto-generated</span>
       </div>
     </section>
   )
