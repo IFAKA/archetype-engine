@@ -191,6 +191,7 @@ export function parseEntityJSON(entity: EntityJSON): EntityIR {
     behaviors,
     auth: entity.auth || false,
     protected: parseProtectedJSON(entity.protected),
+    _hasProtected: entity.protected !== undefined && entity.protected !== false,
     source,
     hooks: parseHooksJSON(entity.hooks),
   }

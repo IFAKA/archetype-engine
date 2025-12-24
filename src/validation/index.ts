@@ -200,18 +200,9 @@ function validateEntity(
     }
   }
 
-  // Check protected requires auth
+  // Check protected requires auth (only if explicitly set)
   if (entity.protected !== undefined && entity.protected !== false) {
-    if (!authEnabled) {
-      errors.push({
-        code: ValidationCodes.AUTH_REQUIRED_FOR_PROTECTED,
-        path: `${path}.protected`,
-        message: `Entity '${entity.name}' has protected operations but auth is not enabled`,
-        suggestion: `Add auth: { enabled: true } to manifest, or remove protected from entity`,
-      })
-    }
-
-    // Validate protected value
+    // Validate protected value format
     const validProtectedStrings = ['write', 'all']
     if (
       typeof entity.protected !== 'boolean' &&
@@ -223,6 +214,16 @@ function validateEntity(
         path: `${path}.protected`,
         message: `Invalid protected value '${entity.protected}'`,
         suggestion: `Use one of: true, false, 'write', 'all', or an object with list/get/create/update/remove`,
+      })
+    }
+
+    // Only require auth if protected is explicitly enabled
+    if (!authEnabled) {
+      errors.push({
+        code: ValidationCodes.AUTH_REQUIRED_FOR_PROTECTED,
+        path: `${path}.protected`,
+        message: `Entity '${entity.name}' has protected operations but auth is not enabled`,
+        suggestion: `Add auth: { enabled: true } to manifest, or remove protected from entity`,
       })
     }
   }

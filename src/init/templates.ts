@@ -359,6 +359,26 @@ export { handler as GET, handler as POST }
 `
 }
 
+// vitest.config.ts
+export function getVitestConfigTemplate(structure: ProjectStructure): string {
+  const prefix = structure.useSrcDir ? './src/' : './'
+  return `import { defineConfig } from 'vitest/config'
+import path from 'path'
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '${prefix}'),
+    },
+  },
+})
+`
+}
+
 // drizzle.config.ts
 export function getDrizzleConfigTemplate(database: DatabaseType): string {
   const dialectMap: Record<DatabaseType, string> = {
@@ -981,6 +1001,8 @@ export function getAllTemplateFiles(config: InitConfig, structure: ProjectStruct
   const files: TemplateFile[] = [
     // Config - always needed
     { path: 'archetype.config.ts', content: getConfigTemplate(config) },
+    // Vitest config for path aliases
+    { path: 'vitest.config.ts', content: getVitestConfigTemplate(structure) },
     // Gitignore - always needed
     { path: '.gitignore', content: getGitignoreTemplate() },
     // AI assistant guidance files

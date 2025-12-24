@@ -134,9 +134,9 @@ function generateMockValue(fieldName: string, field: FieldConfig, index: number)
     
     case 'date':
       if (lowerName.includes('birth')) {
-        return `faker ? faker.date.birthdate() : new Date(1990 + (i % 30), i % 12, 1 + (i % 28))`
+        return `faker ? faker.date.birthdate().toISOString() : new Date(1990 + (i % 30), i % 12, 1 + (i % 28)).toISOString()`
       }
-      return `faker ? faker.date.recent() : new Date()`
+      return `faker ? faker.date.recent().toISOString() : new Date().toISOString()`
     
     case 'enum':
       const enumValues = (field as any).enumValues || []
@@ -189,6 +189,9 @@ function generateEntitySeedFunction(entity: EntityIR): string {
   lines.push(``)
   lines.push(`  const data = Array.from({ length: count }, (_, i) => ({`)
   
+  // Add ID field
+  lines.push(`    id: faker ? faker.string.uuid() : \`${entityName.toLowerCase()}-\${Date.now()}-\${i}\`,`)
+  
   // Generate field values
   for (const [fieldName, field] of seedableFields) {
     const value = generateMockValue(fieldName, field, 0)
@@ -203,8 +206,8 @@ function generateEntitySeedFunction(entity: EntityIR): string {
   
   // Add timestamps if enabled
   if (entity.behaviors.timestamps) {
-    lines.push(`    createdAt: faker ? faker.date.recent({ days: 30 }) : new Date(),`)
-    lines.push(`    updatedAt: faker ? faker.date.recent({ days: 7 }) : new Date(),`)
+    lines.push(`    createdAt: faker ? faker.date.recent({ days: 30 }).toISOString() : new Date().toISOString(),`)
+    lines.push(`    updatedAt: faker ? faker.date.recent({ days: 7 }).toISOString() : new Date().toISOString(),`)
   }
   
   lines.push(`  }))`)

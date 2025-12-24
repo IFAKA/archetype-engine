@@ -552,7 +552,8 @@ function loadJSONManifest(configFile: string): ManifestJSON {
       ),
       behaviors: e.behaviors,
       auth: e.auth,
-      protected: e.protected,
+      // Only include protected if it was explicitly set (for validation)
+      protected: e._hasProtected ? e.protected : undefined,
     })),
     database: manifest.database,
     mode: manifest.mode.type,

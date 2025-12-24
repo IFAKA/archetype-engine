@@ -141,6 +141,8 @@ export interface EntityIR {
   auth: boolean
   /** Normalized protection config for CRUD operations */
   protected: ProtectedIR
+  /** Whether protected was explicitly set (for validation) */
+  _hasProtected: boolean
   /** External API source (optional - inherits from manifest if not specified) */
   source?: ExternalSourceConfig
   /** Normalized hooks config */
@@ -219,6 +221,7 @@ function compileEntity(name: string, definition: EntityDefinition): EntityIR {
     },
     auth: definition.auth || false,
     protected: normalizeProtected(definition.protected),
+    _hasProtected: definition.protected !== undefined && definition.protected !== false,
     source: definition.source,
     hooks: normalizeHooks(definition.hooks),
   }

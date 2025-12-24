@@ -196,11 +196,7 @@ function generateEntityTest(entity: EntityIR, manifest: ManifestIR): string {
 
   // Imports
   lines.push(`import { describe, it, expect, beforeEach } from 'vitest'`)
-  lines.push(`import { appRouter } from '@/generated/trpc/routers'`)
-  lines.push(`import { createCallerFactory } from '@trpc/server'`)
-  lines.push(``)
-  lines.push(`// Create tRPC caller for testing`)
-  lines.push(`const createCaller = createCallerFactory(appRouter)`)
+  lines.push(`import { appRouter } from '../trpc/routers'`)
   lines.push(``)
   
   // Mock contexts
@@ -222,9 +218,9 @@ function generateEntityTest(entity: EntityIR, manifest: ManifestIR): string {
 
   // Test suite
   lines.push(`describe('${entityName} Router', () => {`)
-  lines.push(`  const publicCaller = createCaller(mockPublicContext)`)
+  lines.push(`  const publicCaller = appRouter.createCaller(mockPublicContext)`)
   if (hasAuth) {
-    lines.push(`  const authCaller = createCaller(mockAuthContext)`)
+    lines.push(`  const authCaller = appRouter.createCaller(mockAuthContext)`)
   }
   lines.push(``)
 
