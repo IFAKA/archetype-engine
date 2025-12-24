@@ -1,52 +1,30 @@
-# 🔐 One-Time npm Token Setup
+# 🔐 One-Time Trusted Publisher Setup (Better than Tokens!)
 
-## Quick Visual Guide (5 minutes)
+npm now supports **Trusted Publishing** - no tokens needed!
 
-### Step 1: Create Token on npm (2 minutes)
+## Quick Setup (2 minutes)
 
-1. **Open:** https://www.npmjs.com/settings/zfaka/tokens
+### Step 1: Configure Trusted Publisher on npm (1 minute)
+
+1. **Open:** https://www.npmjs.com/package/archetype-engine/settings
    
-2. **Click:** "Generate New Token" → "Granular Access Token"
+2. **Scroll to:** "Trusted Publisher" section
 
-3. **Fill form:**
+3. **Click:** "GitHub Actions" button
+
+4. **Fill in:**
    ```
-   Token name: github-actions-archetype-engine
-   Expiration: 90 days
+   Organization or user: IFAKA
+   Repository: archetype-engine
+   Workflow filename: publish.yml
+   Environment name: (leave empty)
    ```
 
-4. **Under "Packages and scopes":**
-   - Click "Select packages and scopes"
-   - Find: `archetype-engine`
-   - Enable: ☑️ Read and write
+5. **Click:** "Add" or "Save"
 
-5. **Click:** "Generate Token"
+### Step 2: Done! (That's it)
 
-6. **Copy token** (starts with `npm_...`)
-
-### Step 2: Add to GitHub (1 minute)
-
-**Option A - Command Line (Easiest):**
-```bash
-gh secret set NPM_TOKEN --repo IFAKA/archetype-engine
-# Paste token when prompted, press Enter
-```
-
-**Option B - Web Browser:**
-1. Open: https://github.com/IFAKA/archetype-engine/settings/secrets/actions/new
-2. Name: `NPM_TOKEN`
-3. Value: Paste token
-4. Click "Add secret"
-
-### Step 3: Verify (30 seconds)
-
-```bash
-gh secret list --repo IFAKA/archetype-engine
-```
-
-Should show:
-```
-NPM_TOKEN  Updated 2024-12-24
-```
+No tokens needed. GitHub Actions will use OIDC to authenticate automatically.
 
 ---
 
