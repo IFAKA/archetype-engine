@@ -87,6 +87,17 @@ my-app/
 │   │       └── index.ts         # Combined router
 │   ├── hooks/
 │   │   └── useTask.ts           # React hooks
+│   ├── tests/                   # 🆕 Auto-generated tests
+│   │   ├── task.test.ts         # Test suites
+│   │   └── setup.ts             # Test config
+│   ├── docs/                    # 🆕 Auto-generated API docs
+│   │   ├── openapi.json         # OpenAPI 3.0 spec
+│   │   ├── swagger.html         # Swagger UI
+│   │   └── API.md               # Markdown docs
+│   ├── seeds/                   # 🆕 Auto-generated seed data
+│   │   ├── task.ts              # Seed functions
+│   │   ├── index.ts             # Orchestrator
+│   │   └── run.ts               # CLI runner
 │   └── erd.md                   # Mermaid diagram
 └── src/
     └── server/
