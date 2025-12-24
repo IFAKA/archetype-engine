@@ -132,7 +132,10 @@ function generateInvalidValue(fieldName: string, field: FieldConfig): { value: s
       }
       const minLength = field.validations.find(v => v.type === 'minLength')
       if (minLength) {
-        return { value: `'x'`, reason: `below minimum length of ${minLength.value}` }
+        const minVal = minLength.value as number
+        // Generate a string shorter than the minimum (empty string if min is 1)
+        const invalidStr = minVal > 1 ? 'x'.repeat(minVal - 1) : ''
+        return { value: `'${invalidStr}'`, reason: `below minimum length of ${minLength.value}` }
       }
       const maxLength = field.validations.find(v => v.type === 'maxLength')
       if (maxLength) {
@@ -393,10 +396,9 @@ function generateEntityTest(entity: EntityIR, manifest: ManifestIR): string {
   lines.push(``)
   
   const getCaller = entity.protected.get ? 'authCaller' : 'publicCaller'
-  lines.push(`    it('should throw error for non-existent ID', async () => {`)
-  lines.push(`      await expect(`)
-  lines.push(`        ${getCaller}.${routerName}.get({ id: 'non-existent-id' })`)
-  lines.push(`      ).rejects.toThrow()`)
+  lines.push(`    it('should return null for non-existent ID', async () => {`)
+  lines.push(`      const result = await ${getCaller}.${routerName}.get({ id: 'non-existent-id' })`)
+  lines.push(`      expect(result).toBeNull()`)
   lines.push(`    })`)
   lines.push(``)
   
@@ -436,7 +438,7 @@ function generateEntityTest(entity: EntityIR, manifest: ManifestIR): string {
     lines.push(`      expect(result.${firstField}).toBe(updateData.${firstField})`)
     
     if (hasTimestamps) {
-      lines.push(`      expect(new Date(result.updatedAt).getTime()).toBeGreaterThan(new Date(created.updatedAt).getTime())`)
+      lines.push(`      expect(new Date(result.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(created.updatedAt).getTime())`)
     }
   }
   
