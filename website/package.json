@@ -19,6 +19,7 @@
     "@docusaurus/core": "3.9.2",
     "@docusaurus/preset-classic": "3.9.2",
     "@mdx-js/react": "^3.0.0",
+    "@mlc-ai/web-llm": "^0.2.80",
     "clsx": "^2.0.0",
     "glob": "^13.0.0",
     "gray-matter": "^4.0.3",
