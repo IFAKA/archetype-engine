@@ -54,7 +54,7 @@ export function AIChat({ onClose }: AIChatProps) {
       .then(index => {
         const ms = MiniSearch.loadJSON(index, {
           fields: ['title', 'headings', 'content', 'description'],
-          storeFields: ['title', 'path', 'description']
+          storeFields: ['title', 'path', 'description', 'content', 'headings']
         })
         setMiniSearch(ms)
       })
@@ -150,22 +150,41 @@ export function AIChat({ onClose }: AIChatProps) {
   }
 
   // Get relevant docs for RAG
-  const getRelevantDocs = useCallback(async (query: string): Promise<string> => {
-    if (!miniSearch) return ''
+  const getRelevantDocs = useCallback(async (query: string): Promise<{ context: string; sources: string[] }> => {
+    if (!miniSearch) return { context: '', sources: [] }
     
     const results = miniSearch.search(query, { 
       fuzzy: 0.2,
       prefix: true,
+      boost: { title: 2 },
     }).slice(0, 3)
     
-    if (results.length === 0) return ''
+    if (results.length === 0) return { context: '', sources: [] }
     
-    // Build context from top results with clickable links
-    const context = results.map((result: any) => {
-      return `## ${result.title}\n[View documentation](${result.path})\n\n${result.description || ''}\n`
-    }).join('\n\n')
+    // Fetch full content from search index (stored fields)
+    const sources: string[] = []
+    const contextParts: string[] = []
     
-    return context
+    for (const result of results) {
+      const doc = miniSearch.getStoredFields(result.id) as any
+      if (!doc) continue
+      
+      sources.push(`${doc.title} - ${doc.path}`)
+      
+      // Build rich context with full content (limit to prevent token overflow)
+      const content = typeof doc.content === 'string' ? doc.content.slice(0, 2000) : ''
+      contextParts.push(`
+### ${doc.title}
+**Documentation Link:** ${doc.path}
+
+${content}
+`.trim())
+    }
+    
+    return {
+      context: contextParts.join('\n\n---\n\n'),
+      sources
+    }
   }, [miniSearch])
 
   // Send message to AI
@@ -179,22 +198,25 @@ export function AIChat({ onClose }: AIChatProps) {
 
     try {
       // Get relevant docs for context (RAG)
-      const docsContext = await getRelevantDocs(message)
+      const { context: docsContext, sources } = await getRelevantDocs(message)
       
       const systemPrompt = `You are a helpful assistant for Archetype Engine documentation. Archetype is a TypeScript code generator that creates type-safe CRUD backends from entity definitions.
 
 ${docsContext ? `DOCUMENTATION CONTEXT (use ONLY this as your source of truth):\n\n${docsContext}\n` : 'No relevant documentation found for this question.'}
 
-CRITICAL RULES:
-- ONLY answer based on the documentation provided above
-- If the documentation doesn't cover the question, say "I don't have information about that in the documentation"
-- DO NOT use external knowledge or make assumptions
-- Use markdown formatting for code examples
-- ALWAYS include the [View documentation](path) links from the context in your answer
-- When mentioning a feature, include its documentation link
+CRITICAL RULES - ZERO HALLUCINATION POLICY:
+- ONLY answer based on the EXACT documentation provided above
+- If the documentation doesn't cover the question, respond: "I don't have information about that in the documentation. You can browse all docs at /docs/intro"
+- DO NOT invent functions, APIs, or features that aren't in the documentation
+- DO NOT use external knowledge about Next.js, React, or other frameworks
+- Quote code examples EXACTLY as shown in the documentation
+- ALWAYS cite your sources by including documentation links in your answer
+- At the end of every answer, add a "Sources:" section listing the documentation pages you referenced
 - Be concise (under 300 words) unless asked for detail
 - Complete your thoughts fully - don't cut off mid-explanation
-- Format code blocks with proper syntax highlighting using triple backticks`
+- Format code blocks with proper syntax highlighting using triple backticks
+
+IMPORTANT: If asked about something not in the provided context, say you don't know rather than guessing.`
 
       const response = await engine.chat.completions.create({
         messages: [
@@ -202,13 +224,20 @@ CRITICAL RULES:
           ...chat.map(m => ({ role: m.role, content: m.content })),
           { role: 'user', content: message }
         ],
-        temperature: 0.7,
+        temperature: 0.3,
         max_tokens: 1536,
       })
 
+      let aiResponse = response.choices[0].message.content || 'Sorry, I could not generate a response.'
+      
+      // Append sources automatically if AI didn't include them
+      if (sources.length > 0 && !aiResponse.includes('Sources:')) {
+        aiResponse += `\n\n---\n\n**Sources:**\n${sources.map(s => `- ${s}`).join('\n')}`
+      }
+
       const aiMsg: Message = {
         role: 'assistant',
-        content: response.choices[0].message.content || 'Sorry, I could not generate a response.'
+        content: aiResponse
       }
       
       setChat(prev => [...prev, aiMsg])

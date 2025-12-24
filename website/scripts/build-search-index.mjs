@@ -108,7 +108,7 @@ function buildSearchIndex() {
   // Create search index
   const miniSearch = new MiniSearch({
     fields: ['title', 'headings', 'content', 'description'],
-    storeFields: ['title', 'path', 'description'],
+    storeFields: ['title', 'path', 'description', 'content', 'headings'], // Store full content for RAG
     searchOptions: {
       boost: { title: 3, headings: 2, description: 1.5 },
       fuzzy: 0.2,
