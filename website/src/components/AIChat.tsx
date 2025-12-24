@@ -192,7 +192,8 @@ CRITICAL RULES:
 - Use markdown formatting for code examples
 - ALWAYS include the [View documentation](path) links from the context in your answer
 - When mentioning a feature, include its documentation link
-- Be concise (under 200 words) unless asked for detail
+- Be concise (under 300 words) unless asked for detail
+- Complete your thoughts fully - don't cut off mid-explanation
 - Format code blocks with proper syntax highlighting using triple backticks`
 
       const response = await engine.chat.completions.create({
@@ -202,7 +203,7 @@ CRITICAL RULES:
           { role: 'user', content: message }
         ],
         temperature: 0.7,
-        max_tokens: 512,
+        max_tokens: 1536,
       })
 
       const aiMsg: Message = {

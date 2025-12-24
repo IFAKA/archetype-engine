@@ -224,14 +224,33 @@
   word-wrap: break-word;
 }
 
-/* Markdown styling in AI messages */
+/* Markdown styling in AI messages - simple and clean like docs */
 .messageContent :global(p) {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
 }
 
 .messageContent :global(p):last-child {
   margin-bottom: 0;
 }
+
+/* Headings - simple hierarchy */
+.messageContent :global(h1),
+.messageContent :global(h2),
+.messageContent :global(h3),
+.messageContent :global(h4),
+.messageContent :global(h5),
+.messageContent :global(h6) {
+  margin: 8px 0 4px 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.messageContent :global(h1) { font-size: 1.5em; }
+.messageContent :global(h2) { font-size: 1.3em; }
+.messageContent :global(h3) { font-size: 1.1em; }
+.messageContent :global(h4) { font-size: 1em; }
+.messageContent :global(h5) { font-size: 0.9em; }
+.messageContent :global(h6) { font-size: 0.85em; }
 
 .messageContent :global(code) {
   background: rgba(0, 0, 0, 0.1);
@@ -246,7 +265,7 @@
   padding: 12px;
   border-radius: 8px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .messageContent :global(pre code) {
@@ -256,17 +275,21 @@
 
 .messageContent :global(ul),
 .messageContent :global(ol) {
-  margin: 8px 0;
+  margin: 4px 0;
   padding-left: 20px;
 }
 
 .messageContent :global(li) {
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .messageContent :global(a) {
   color: var(--ifm-color-primary);
   text-decoration: underline;
+}
+
+.messageContent :global(a):hover {
+  color: var(--ifm-color-primary-dark);
 }
 
 .messageContent :global(strong) {
@@ -280,7 +303,7 @@
 .messageContent :global(blockquote) {
   border-left: 3px solid var(--ifm-color-primary);
   padding-left: 12px;
-  margin: 8px 0;
+  margin: 6px 0;
   color: var(--ifm-color-emphasis-700);
 }
 
